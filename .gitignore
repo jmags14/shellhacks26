@@ -3,6 +3,11 @@ __pycache__/
 .venv/
 venv/
 env/
+Lib/
+Lib/site-packages
+Scripts/
+Include/
+pyvenv.cfg
 
 .env
 .env.*
