@@ -19,10 +19,8 @@ personal_agent = Agent(
     model=Gemini(
         model="gemini-3.8-flash",
         retry_options=types.HttpRetryOptions(
-            attempts=5,
-            initial_delay=2,
-            max_delay=16,
-            http_status_codes=[429, 500, 502, 503, 504],
+            # One total attempt: conserve the daily request allowance.
+            attempts=1,
         ),
     ),
     # ADK manages tool calls; SDK automatic function calling is unnecessary.

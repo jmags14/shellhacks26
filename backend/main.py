@@ -3,8 +3,9 @@ from pydantic import BaseModel
 import subprocess
 import os
 import uuid
+from uuid import UUID
 import json
-
+from agents.cook_together.workflow import cook_together
 from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe
@@ -16,8 +17,31 @@ app = FastAPI()
 def read_root():
     return {"status": "ok"}
 
+class CookTogetherRequest(BaseModel):
+    user_ids: list[UUID]
+    intent: str | None = None
+
 class ImportRequest(BaseModel):
     url: str
+
+@app.post("/cook-together")
+async def create_cook_together(
+    request: CookTogetherRequest,
+):
+    result = await cook_together(
+        user_ids=request.user_ids,
+        intent=request.intent,
+
+        # ==============================================
+        # MOCK MODE — 0 GEMINI REQUESTS
+        #
+        # FINAL REAL GEMINI VERSION:
+        # Change True -> False
+        # ==============================================
+        use_mock_agents=True,
+    )
+
+    return result
 
 @app.post("/import")
 def import_recipe(request: ImportRequest):
