@@ -48,6 +48,55 @@ export default function LoginPage() {
     fontSize: '0.95rem', outline: 'none', background: '#fff',
   }
 
+  // Form screen
+  if (mode) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', padding: '2rem', background: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+
+        {/* Back arrow */}
+        <button
+          onClick={() => selectMode(null)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: '#3D2B1F', padding: 0, alignSelf: 'flex-start', lineHeight: 1 }}
+        >
+          ←
+        </button>
+
+        {/* Heading */}
+        <h1 style={{ margin: '1.5rem 0 1.5rem', fontSize: '2rem', fontWeight: '800', color: '#3D2B1F', fontFamily: 'Bebas Neue, sans-serif' }}>
+          {mode === 'login' ? 'Log In' : 'Sign Up'}
+        </h1>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {mode === 'signup' && (
+            <input type="text" required placeholder="Name" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+          )}
+          <input type="email" required placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
+          <input type="password" required placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
+          {mode === 'signup' && (
+            <input type="password" required placeholder="Confirm Password" value={confirm} onChange={e => setConfirm(e.target.value)} style={inputStyle} />
+          )}
+          <button
+            type="submit"
+            style={{
+              width: '100%', padding: '0.75rem',
+              background: mode === 'login' ? '#FAAED2' : '#F8CE5B',
+              color: '#3D2B1F', border: 'none', borderRadius: '12px',
+              fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer',
+              marginTop: '0.5rem',
+            }}
+          >
+            {mode === 'login' ? 'Log In' : 'Sign Up'}
+          </button>
+        </form>
+
+        {error && <p style={{ color: '#ef4444', textAlign: 'center', margin: '0.75rem 0 0' }} role="alert">{error}</p>}
+        {success && <p style={{ color: '#2F6B4F', textAlign: 'center', margin: '0.75rem 0 0' }}>{success}</p>}
+      </div>
+    )
+  }
+
+  // Splash screen
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden',
@@ -74,35 +123,6 @@ export default function LoginPage() {
           Your FYP is now your meal plan.<br />Scroll, save, and cook with friends.
         </p>
       </div>
-
-      {/* Form — shown after mode selected */}
-      {mode && (
-        <div style={{ width: '100%', maxWidth: '360px', alignSelf: 'center', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {mode === 'signup' && (
-              <input type="text" required placeholder="Name" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
-            )}
-            <input type="email" required placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
-            <input type="password" required placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
-            {mode === 'signup' && (
-              <input type="password" required placeholder="Confirm Password" value={confirm} onChange={e => setConfirm(e.target.value)} style={inputStyle} />
-            )}
-            <button
-              type="submit"
-              style={{
-                width: '100%', padding: '0.65rem',
-                background: mode === 'login' ? '#FAAED2' : '#F8CE5B',
-                color: '#3D2B1F', border: 'none', borderRadius: '12px',
-                fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer',
-              }}
-            >
-              {mode === 'login' ? 'Log In' : 'Sign Up'}
-            </button>
-          </form>
-          {error && <p style={{ color: '#ef4444', textAlign: 'center', margin: 0 }} role="alert">{error}</p>}
-          {success && <p style={{ color: '#2F6B4F', textAlign: 'center', margin: 0 }}>{success}</p>}
-        </div>
-      )}
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
