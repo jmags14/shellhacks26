@@ -11,6 +11,8 @@ export default function RecipeDetailPage() {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([])
   const [agentRunning, setAgentRunning] = useState(false)
   const [agentLogs, setAgentLogs] = useState<string[]>([])
+  const [rating, setRating] = useState<string | null>(null)
+  const [note, setNote] = useState('')
 
   const haveCount = recipe.ingredients.filter(i => i.have).length
 
@@ -136,6 +138,43 @@ export default function RecipeDetailPage() {
               {agentLogs.join('\n')}{agentRunning ? '\n▊' : ''}
             </pre>
           )}
+        </section>
+
+        {/* Rating */}
+        <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#6b7280' }}>Rate this recipe</span>
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {[['😍', 'I love it'], ['👍', 'Like it'], ['👎', 'Hate it']].map(([emoji, label]) => (
+              <button
+                key={label}
+                onClick={() => setRating(label)}
+                style={{
+                  flex: 1, padding: '0.5rem 0.25rem',
+                  background: rating === label ? '#FAAED2' : '#fff',
+                  color: rating === label ? '#3D2B1F' : '#374151',
+                  border: `${rating === label ? '2px solid #e8a0c0' : '1px solid #d1d5db'}`,
+                  borderRadius: '999px', fontSize: '0.8rem', fontWeight: '500', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                }}
+              >
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            placeholder="Add a note..."
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            rows={3}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.85rem', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
+          />
+
+          <button
+            style={{ width: '100%', padding: '0.7rem', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
+          >
+            Save
+          </button>
         </section>
 
       </div>
