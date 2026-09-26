@@ -7,6 +7,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // Shared .env (VITE_SUPABASE_URL, etc.) lives at the repo root, one level up.
   envDir: '../',
+  server: {
+    host: true,
+  },
   plugins: [
     react(),
     tailwindcss(),
