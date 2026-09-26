@@ -19,9 +19,9 @@ export default function HomePage() {
 
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Doomscroll &amp; Dine</h1>
+        <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: '400', fontFamily: 'Bebas Neue, sans-serif', color: '#1a1a1a' }}>Doomscroll &amp; Dine</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{user?.email}</span>
+          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{user?.user_metadata?.full_name?.split(' ')[0] ?? user?.email}</span>
           <button onClick={signOut} style={{ fontSize: '0.8rem', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             Sign out
           </button>

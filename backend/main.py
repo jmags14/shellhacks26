@@ -9,9 +9,10 @@ from agents.cook_together.workflow import cook_together
 from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe
-
+from services.embedding_service import embed_recipe
 
 app = FastAPI()
+
 
 @app.get("/")
 def read_root():
@@ -23,6 +24,8 @@ class CookTogetherRequest(BaseModel):
 
 class ImportRequest(BaseModel):
     url: str
+    user_id: str
+
 
 @app.post("/cook-together")
 async def create_cook_together(
@@ -57,7 +60,10 @@ def import_recipe(request: ImportRequest):
     )
 
     if download_result.returncode != 0:
-        return {"success": False, "error": download_result.stderr}
+        return {
+            "success": False,
+            "error": download_result.stderr
+        }
 
     info_result = subprocess.run(
         ["yt-dlp", "--dump-json", request.url],
@@ -66,14 +72,34 @@ def import_recipe(request: ImportRequest):
     )
 
     if info_result.returncode != 0:
-        return {"success": False, "error": info_result.stderr}
+        return {
+            "success": False,
+            "error": info_result.stderr
+        }
 
     metadata = json.loads(info_result.stdout)
     caption = metadata.get("description", "")
 
     extracted = extract_recipe(caption, output_path)
-    verification = verify_recipe(caption, extracted, output_path)
-    recipe_id = save_recipe(extracted, request.url)
+
+    verification = verify_recipe(
+        caption,
+        extracted,
+        output_path
+    )
+
+    recipe_id = save_recipe(
+        extracted,
+        request.url,
+        request.user_id
+    )
+
+    try:
+        embed_recipe(recipe_id)
+        embedded = True
+    except Exception as e:
+        print(f"Embedding failed: {e}")
+        embedded = False
 
     return {
         "success": True,
@@ -81,12 +107,23 @@ def import_recipe(request: ImportRequest):
         "caption": caption,
         "extracted_recipe": extracted,
         "verification": verification,
+        "recipe_id": recipe_id,
+        "embedded": embedded,
         "recipe_id": recipe_id
     }
 
+
 @app.get("/recipes/{recipe_id}")
-def get_recipe_route(recipe_id: str):
-    recipe = get_recipe(recipe_id)
+def get_recipe_route(recipe_id: str, user_id: str):
+    recipe = get_recipe(recipe_id, user_id)
+
     if recipe is None:
-        return {"success": False, "error": "Recipe not found"}
-    return {"success": True, "recipe": recipe}
+        return {
+            "success": False,
+            "error": "Recipe not found"
+        }
+
+    return {
+        "success": True,
+        "recipe": recipe
+    }

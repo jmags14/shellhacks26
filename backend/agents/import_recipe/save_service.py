@@ -4,19 +4,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def save_recipe(extracted: dict, source_url: str):
+
+def save_recipe(extracted: dict, source_url: str, owner_id: str):
     conn = psycopg.connect(os.getenv("DATABASE_URL"))
     cur = conn.cursor()
 
     cur.execute(
         """
-        INSERT INTO recipes (title, source, source_url)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (title) DO UPDATE SET source_url = EXCLUDED.source_url
+        INSERT INTO recipes (title, source, source_url, owner_id)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (title) DO UPDATE
+        SET source_url = EXCLUDED.source_url,
+            owner_id = EXCLUDED.owner_id
         RETURNING id
         """,
-        (extracted["title"], "instagram", source_url)
+        (
+            extracted["title"],
+            "instagram",
+            source_url,
+            owner_id
+        )
     )
+
     recipe_id = cur.fetchone()[0]
 
     for ing in extracted["ingredients"]:
@@ -29,18 +38,31 @@ def save_recipe(extracted: dict, source_url: str):
             """,
             (ing["name"],)
         )
+
         ingredient_id = cur.fetchone()[0]
 
         cur.execute(
             """
-            INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, preparation, optional)
+            INSERT INTO recipe_ingredients
+            (recipe_id, ingredient_id, quantity, unit, preparation, optional)
             VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (recipe_id, ingredient_id) DO NOTHING
+            ON CONFLICT (recipe_id, ingredient_id)
+            DO UPDATE SET
+                quantity = EXCLUDED.quantity,
+                unit = EXCLUDED.unit,
+                preparation = EXCLUDED.preparation,
+                optional = EXCLUDED.optional
             """,
-            (recipe_id, ingredient_id, ing.get("quantity"), ing.get("unit"), ing.get("preparation"), ing.get("optional", False))
+            (
+                recipe_id,
+                ingredient_id,
+                ing.get("quantity"),
+                ing.get("unit"),
+                ing.get("preparation"),
+                ing.get("optional", False)
+            )
         )
 
-        # Clear existing instructions before inserting fresh ones (in case this recipe already existed)
     cur.execute(
         "DELETE FROM recipe_instructions WHERE recipe_id = %s",
         (recipe_id,)
@@ -49,7 +71,8 @@ def save_recipe(extracted: dict, source_url: str):
     for i, step_text in enumerate(extracted["steps"], start=1):
         cur.execute(
             """
-            INSERT INTO recipe_instructions (recipe_id, step_number, instruction)
+            INSERT INTO recipe_instructions
+            (recipe_id, step_number, instruction)
             VALUES (%s, %s, %s)
             """,
             (recipe_id, i, step_text)
@@ -61,14 +84,21 @@ def save_recipe(extracted: dict, source_url: str):
 
     return str(recipe_id)
 
-def get_recipe(recipe_id: str):
+
+def get_recipe(recipe_id: str, owner_id: str):
     conn = psycopg.connect(os.getenv("DATABASE_URL"))
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT id, title, source, source_url FROM recipes WHERE id = %s",
-        (recipe_id,)
+        """
+        SELECT id, title, source, source_url
+        FROM recipes
+        WHERE id = %s
+          AND (owner_id = %s OR owner_id IS NULL)
+        """,
+        (recipe_id, owner_id)
     )
+
     row = cur.fetchone()
 
     if row is None:
@@ -92,15 +122,47 @@ def get_recipe(recipe_id: str):
         """,
         (recipe_id,)
     )
+
     recipe["ingredients"] = [
-        {"name": r[0], "quantity": r[1], "unit": r[2], "preparation": r[3], "optional": r[4]}
+        {
+            "name": r[0],
+            "quantity": r[1],
+            "unit": r[2],
+            "preparation": r[3],
+            "optional": r[4]
+        }
         for r in cur.fetchall()
     ]
 
     cur.execute(
-        "SELECT step_number, instruction FROM recipe_instructions WHERE recipe_id = %s ORDER BY step_number",
-        (recipe_id,)
+        """
+        INSERT INTO recipes (title, description, source, source_url, owner_id, cuisine, servings, prep_time_minutes, cook_time_minutes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (title) DO UPDATE
+        SET source_url = EXCLUDED.source_url,
+            owner_id = EXCLUDED.owner_id,
+            description = EXCLUDED.description,
+            cuisine = EXCLUDED.cuisine,
+            servings = EXCLUDED.servings,
+            prep_time_minutes = EXCLUDED.prep_time_minutes,
+            cook_time_minutes = EXCLUDED.cook_time_minutes
+        RETURNING id
+        """,
+        (
+            extracted["title"],
+            extracted.get("description"),
+            "instagram",
+            source_url,
+            owner_id,
+            extracted.get("cuisine"),
+            extracted.get("servings"),
+            extracted.get("prep_time_minutes"),
+            extracted.get("cook_time_minutes")
+        )
     )
+
+    recipe_id = cur.fetchone()[0]
+
     recipe["steps"] = [r[1] for r in cur.fetchall()]
 
     cur.close()
