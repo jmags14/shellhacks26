@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { api, type RecipeDetail } from '../lib/api'
-import { MOCK_FRIENDS } from '../lib/mockData'
+import { api, type Friend, type RecipeDetail } from '../lib/api'
 
 export default function RecipeDetailPage() {
   const { id } = useParams()
@@ -10,6 +9,7 @@ export default function RecipeDetailPage() {
   const { user } = useUser()
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [friends, setFriends] = useState<Friend[]>([])
 
   const [tab, setTab] = useState<'ingredients' | 'steps'>('ingredients')
   const [selectedFriends, setSelectedFriends] = useState<string[]>([])
@@ -17,6 +17,11 @@ export default function RecipeDetailPage() {
   const [agentLogs, setAgentLogs] = useState<string[]>([])
   const [rating, setRating] = useState<string | null>(null)
   const [note, setNote] = useState('')
+
+  useEffect(() => {
+    if (!user) return
+    api.listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
+  }, [user])
 
   useEffect(() => {
     if (!user || !id) return
@@ -131,11 +136,12 @@ export default function RecipeDetailPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {MOCK_FRIENDS.map(f => (
-              <label key={f.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                <input type="checkbox" checked={selectedFriends.includes(f.name)} onChange={() => toggleFriend(f.name)} />
-                <span>{f.avatar} {f.name}</span>
-                <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>— {f.taste}</span>
+            {friends.length === 0 && <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No friends yet.</span>}
+            {friends.map(f => (
+              <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                <input type="checkbox" checked={selectedFriends.includes(f.username)} onChange={() => toggleFriend(f.username)} />
+                <span>{f.username}</span>
+                {f.taste && <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>— {f.taste}</span>}
               </label>
             ))}
           </div>

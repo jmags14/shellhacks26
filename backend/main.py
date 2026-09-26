@@ -12,6 +12,7 @@ from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe
 from services.embedding_service import embed_recipe
 from services.recipe_service import list_recipes_for_user
+from services.friend_service import list_friends
 
 app = FastAPI()
 
@@ -122,6 +123,14 @@ def import_recipe(request: ImportRequest):
         "recipe_id": recipe_id,
         "embedded": embedded,
         "recipe_id": recipe_id
+    }
+
+
+@app.get("/friends")
+def list_friends_route(user_id: str):
+    return {
+        "success": True,
+        "friends": list_friends(user_id)
     }
 
 

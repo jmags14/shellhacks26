@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { api, type RecipeSummary } from '../lib/api'
-import { MOCK_FRIENDS } from '../lib/mockData'
+import { api, type Friend, type RecipeSummary } from '../lib/api'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -10,6 +9,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('')
   const [backendUp, setBackendUp] = useState<boolean | null>(null)
 
+  const [friends, setFriends] = useState<Friend[]>([])
   const [recipes, setRecipes] = useState<RecipeSummary[]>([])
   const [recipesLoading, setRecipesLoading] = useState(true)
   const [recipesError, setRecipesError] = useState('')
@@ -21,6 +21,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) return
+    api.listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
     api.listRecipes(user.id)
       .then(res => setRecipes(res.recipes))
       .catch(() => setRecipesError('Could not load recipes.'))
@@ -66,12 +67,13 @@ export default function HomePage() {
         <section>
           <h2 style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Friends</h2>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            {MOCK_FRIENDS.map(f => (
-              <div key={f.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+            {friends.length === 0 && <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No friends yet.</span>}
+            {friends.map(f => (
+              <div key={f.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
-                  {f.avatar}
+                  {f.username.charAt(0).toUpperCase()}
                 </div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{f.name}</span>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{f.username}</span>
               </div>
             ))}
           </div>
