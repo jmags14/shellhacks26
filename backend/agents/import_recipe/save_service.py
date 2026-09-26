@@ -11,18 +11,28 @@ def save_recipe(extracted: dict, source_url: str, owner_id: str):
 
     cur.execute(
         """
-        INSERT INTO recipes (title, source, source_url, owner_id)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO recipes (title, description, source, source_url, owner_id, cuisine, servings, prep_time_minutes, cook_time_minutes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (title) DO UPDATE
         SET source_url = EXCLUDED.source_url,
-            owner_id = EXCLUDED.owner_id
+            owner_id = EXCLUDED.owner_id,
+            description = EXCLUDED.description,
+            cuisine = EXCLUDED.cuisine,
+            servings = EXCLUDED.servings,
+            prep_time_minutes = EXCLUDED.prep_time_minutes,
+            cook_time_minutes = EXCLUDED.cook_time_minutes
         RETURNING id
         """,
         (
             extracted["title"],
-            "instagram",
+            extracted.get("description"),
+            extracted.get("cuisine"),
             source_url,
-            owner_id
+            owner_id,
+            extracted.get("cuisine"),
+            extracted.get("servings"),
+            extracted.get("prep_time_minutes"),
+            extracted.get("cook_time_minutes")
         )
     )
 
@@ -91,7 +101,8 @@ def get_recipe(recipe_id: str, owner_id: str):
 
     cur.execute(
         """
-        SELECT id, title, source, source_url
+        SELECT id, title, source, source_url, description, cuisine,
+               servings, prep_time_minutes, cook_time_minutes
         FROM recipes
         WHERE id = %s
           AND (owner_id = %s OR owner_id IS NULL)
@@ -110,7 +121,11 @@ def get_recipe(recipe_id: str, owner_id: str):
         "id": str(row[0]),
         "title": row[1],
         "source": row[2],
-        "source_url": row[3]
+        "source_url": row[3],
+        "description": row[4],
+        "cuisine": row[5],
+        "servings": row[6],
+        "time_minutes": (row[7] or 0) + (row[8] or 0) or None
     }
 
     cur.execute(
@@ -136,34 +151,16 @@ def get_recipe(recipe_id: str, owner_id: str):
 
     cur.execute(
         """
-        INSERT INTO recipes (title, description, source, source_url, owner_id, cuisine, servings, prep_time_minutes, cook_time_minutes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (title) DO UPDATE
-        SET source_url = EXCLUDED.source_url,
-            owner_id = EXCLUDED.owner_id,
-            description = EXCLUDED.description,
-            cuisine = EXCLUDED.cuisine,
-            servings = EXCLUDED.servings,
-            prep_time_minutes = EXCLUDED.prep_time_minutes,
-            cook_time_minutes = EXCLUDED.cook_time_minutes
-        RETURNING id
+        SELECT instruction
+        FROM recipe_instructions
+        WHERE recipe_id = %s
+        ORDER BY step_number
         """,
-        (
-            extracted["title"],
-            extracted.get("description"),
-            extracted.get("cuisine"),
-            source_url,
-            owner_id,
-            extracted.get("cuisine"),
-            extracted.get("servings"),
-            extracted.get("prep_time_minutes"),
-            extracted.get("cook_time_minutes")
-        )
+        (recipe_id,)
+
     )
 
-    recipe_id = cur.fetchone()[0]
-
-    recipe["steps"] = [r[1] for r in cur.fetchall()]
+    recipe["steps"] = [r[0] for r in cur.fetchall()]
 
     cur.close()
     conn.close()

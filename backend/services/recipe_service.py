@@ -92,3 +92,52 @@ def get_recipes_by_ids(recipe_ids: list[UUID]) -> list[CandidateRecipe]:
 
     finally:
         conn.close()
+
+def list_recipes_for_user(user_id: str) -> list[dict]:
+    """
+    Recipes a user can see: their own, plus unowned (seeded) ones.
+    """
+
+    conn = get_db_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    r.id,
+                    r.title,
+                    r.source,
+                    r.source_url,
+                    r.cuisine,
+                    r.servings,
+                    COALESCE(r.prep_time_minutes, 0)
+                        + COALESCE(r.cook_time_minutes, 0) AS total_time,
+                    (
+                        SELECT COUNT(*)
+                        FROM recipe_ingredients ri
+                        WHERE ri.recipe_id = r.id
+                    ) AS ingredient_count
+                FROM recipes r
+                WHERE r.owner_id = %s OR r.owner_id IS NULL
+                ORDER BY r.created_at DESC;
+                """,
+                (user_id,),
+            )
+
+            return [
+                {
+                    "id": str(row[0]),
+                    "title": row[1],
+                    "source": row[2],
+                    "source_url": row[3],
+                    "cuisine": row[4],
+                    "servings": row[5],
+                    "time_minutes": row[6] or None,
+                    "ingredient_count": row[7],
+                }
+                for row in cursor.fetchall()
+            ]
+
+    finally:
+        conn.close()
