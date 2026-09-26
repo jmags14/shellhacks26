@@ -77,4 +77,12 @@ Caption:
         contents=prompt
     )
 
-    return response.text
+    text = response.text.strip()
+
+    # Remove markdown code fences if Gemini added them
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+
+    return json.loads(text.strip())
