@@ -166,3 +166,35 @@ def get_recipe(recipe_id: str, owner_id: str):
     conn.close()
 
     return recipe
+
+def delete_recipe(recipe_id: str, owner_id: str):
+    conn = psycopg.connect(os.getenv("DATABASE_URL"))
+    cur = conn.cursor()
+
+    # Only delete if this user actually owns the recipe
+    cur.execute(
+        "SELECT owner_id FROM recipes WHERE id = %s",
+        (recipe_id,)
+    )
+    row = cur.fetchone()
+
+    if row is None:
+        cur.close()
+        conn.close()
+        return {"success": False, "error": "Recipe not found"}
+
+    if str(row[0]) != owner_id:
+        cur.close()
+        conn.close()
+        return {"success": False, "error": "You do not have permission to delete this recipe"}
+
+    cur.execute(
+        "DELETE FROM recipes WHERE id = %s",
+        (recipe_id,)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {"success": True}

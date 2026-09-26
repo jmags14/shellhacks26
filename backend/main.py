@@ -14,6 +14,7 @@ from services.embedding_service import embed_recipe
 from agents.import_recipe.price_agent import estimate_recipe_price
 from services.recipe_service import list_recipes_for_user
 from services.friend_service import list_friends
+from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe
 
 app = FastAPI()
 
@@ -167,3 +168,7 @@ def get_recipe_price(recipe_id: str, user_id: str):
     price_estimate = estimate_recipe_price(recipe["ingredients"])
 
     return {"success": True, "price_estimate": price_estimate}
+
+@app.delete("/recipes/{recipe_id}")
+def delete_recipe_route(recipe_id: str, user_id: str):
+    return delete_recipe(recipe_id, user_id)
