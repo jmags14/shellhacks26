@@ -110,7 +110,7 @@ CREATE TABLE recipes (
         REFERENCES users(id)
         ON DELETE SET NULL,
 
-    title VARCHAR(200) NOT NULL,
+    title VARCHAR(200) UNIQUE NOT NULL,
 
     description TEXT,
 
