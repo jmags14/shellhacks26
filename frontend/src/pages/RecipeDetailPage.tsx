@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { getRecipe, listFriends, type Friend, type RecipeDetail } from '../lib/api'
+import { getRecipe, type RecipeDetail } from '../lib/api'
 
 export default function RecipeDetailPage() {
   const { id } = useParams()
@@ -9,19 +9,10 @@ export default function RecipeDetailPage() {
   const { user } = useUser()
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [loadError, setLoadError] = useState('')
-  const [friends, setFriends] = useState<Friend[]>([])
 
   const [tab, setTab] = useState<'ingredients' | 'steps'>('ingredients')
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([])
-  const [agentRunning, setAgentRunning] = useState(false)
-  const [agentLogs, setAgentLogs] = useState<string[]>([])
   const [rating, setRating] = useState<string | null>(null)
   const [note, setNote] = useState('')
-
-  useEffect(() => {
-    if (!user) return
-    listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
-  }, [user])
 
   useEffect(() => {
     if (!user || !id) return
@@ -33,33 +24,6 @@ export default function RecipeDetailPage() {
       .catch(() => setLoadError('Could not load recipe.'))
   }, [user, id])
 
-  function toggleFriend(name: string) {
-    setSelectedFriends(prev =>
-      prev.includes(name) ? prev.filter(f => f !== name) : [...prev, name]
-    )
-  }
-
-  async function startCookTogether() {
-    setAgentRunning(true)
-    setAgentLogs([])
-    const events = [
-      'Starting Personal Agents for each friend…',
-      `Rachel's agent: no allergy conflicts found`,
-      `Sarah's agent: no cilantro in this recipe`,
-      `Maya's agent: checking gluten — tortillas ⚠️ (can swap to corn)`,
-      'Planner: scoring recipe for the group…',
-      'Group score: 87/100 — great match!',
-      'Shopping list: corn tortillas, Oaxacan cheese, limes',
-      'Cost split: ~$3.17 per person',
-      'Done! Everyone can eat this.',
-    ]
-    for (const event of events) {
-      await new Promise(r => setTimeout(r, 600))
-      setAgentLogs(prev => [...prev, event])
-    }
-    setAgentRunning(false)
-  }
-
   const tabBtn = (t: 'ingredients' | 'steps') => ({
     flex: 1, padding: '0.6rem', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
     background: tab === t ? '#FAAED2' : '#fff',
@@ -69,8 +33,6 @@ export default function RecipeDetailPage() {
     borderLeft: t === 'ingredients' ? '1px solid #d1d5db' : 'none',
     borderRight: t === 'steps' ? '1px solid #d1d5db' : 'none',
   })
-
-  console.log('ingredients:', recipe?.ingredients)
 
   if (!recipe) {
     return (
@@ -129,39 +91,6 @@ export default function RecipeDetailPage() {
             ))}
           </ol>
         )}
-
-        {/* Cook Together */}
-        <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: '600' }}>Cook Together</h2>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Pick who's joining and let AI check allergies, pantries, and split the cost.</p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {friends.length === 0 && <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No friends yet.</span>}
-            {friends.map(f => (
-              <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                <input type="checkbox" checked={selectedFriends.includes(f.name)} onChange={() => toggleFriend(f.name)} />
-                <span>{f.name}</span>
-                {f.taste && <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>— {f.taste}</span>}
-              </label>
-            ))}
-          </div>
-
-          <button
-            onClick={startCookTogether}
-            disabled={agentRunning || selectedFriends.length === 0}
-            style={{ padding: '0.75rem', background: '#FAAED2', color: '#3D2B1F', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', opacity: selectedFriends.length === 0 ? 0.5 : 1 }}
-          >
-            {agentRunning ? 'Planning…' : 'Start AI planning'}
-          </button>
-
-          {agentLogs.length > 0 && (
-            <pre style={{ margin: 0, background: '#111827', color: '#4ade80', padding: '0.75rem', borderRadius: '8px', fontSize: '0.8rem', lineHeight: '1.6', overflowX: 'auto' }}>
-              {agentLogs.join('\n')}{agentRunning ? '\n▊' : ''}
-            </pre>
-          )}
-        </section>
 
         {/* Rating */}
         <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

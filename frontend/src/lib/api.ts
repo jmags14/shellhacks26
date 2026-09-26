@@ -41,6 +41,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export interface Friend {
   id: string
   name: string
+  emoji: string
   taste?: string
 }
 
@@ -71,13 +72,22 @@ export interface RecipeDetail extends RecipeSummary {
   cost_to_finish?: number // seeded data only
 }
 
+const FRIEND_EMOJIS = ['🐱', '🐼', '🦊', '🐨', '🐰', '🐸', '🦁', '🐙']
+
+// The DB has no avatar field, so derive a stable emoji from the friend's id.
+function emojiFor(id: string): string {
+  let sum = 0
+  for (const ch of id) sum += ch.charCodeAt(0)
+  return FRIEND_EMOJIS[sum % FRIEND_EMOJIS.length]
+}
+
 export async function listFriends(userId: string): Promise<{ friends: Friend[] }> {
   if (USE_SEEDED_DATA) return { friends: SEEDED_FRIENDS }
 
   const res = await request<{ friends: { id: string; username: string; taste?: string }[] }>(
     `/friends?user_id=${encodeURIComponent(userId)}`,
   )
-  return { friends: res.friends.map(f => ({ id: f.id, name: f.username, taste: f.taste })) }
+  return { friends: res.friends.map(f => ({ id: f.id, name: f.username, emoji: emojiFor(f.id), taste: f.taste })) }
 }
 
 export async function listRecipes(userId: string): Promise<{ recipes: RecipeSummary[] }> {
