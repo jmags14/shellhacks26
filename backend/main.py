@@ -15,6 +15,7 @@ from agents.import_recipe.price_agent import estimate_recipe_price
 from services.recipe_service import list_recipes_for_user
 from services.friend_service import list_friends
 from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe
+from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
 
 app = FastAPI()
 
@@ -172,3 +173,25 @@ def get_recipe_price(recipe_id: str, user_id: str):
 @app.delete("/recipes/{recipe_id}")
 def delete_recipe_route(recipe_id: str, user_id: str):
     return delete_recipe(recipe_id, user_id)
+
+from fastapi.responses import Response
+
+@app.get("/recipes/{recipe_id}/narrate")
+def narrate_recipe_route(recipe_id: str, user_id: str, step: int = None):
+    recipe = get_recipe(recipe_id, user_id)
+
+    if recipe is None:
+        return {"success": False, "error": "Recipe not found"}
+
+    if step is not None:
+        if step < 1 or step > len(recipe["steps"]):
+            return {"success": False, "error": f"Step must be between 1 and {len(recipe['steps'])}"}
+        text = f"Step {step}: {recipe['steps'][step - 1]}"
+    else:
+        text = f"Let's make {recipe['title']}. " + " ".join(
+            f"Step {i}: {s}" for i, s in enumerate(recipe["steps"], start=1)
+        )
+
+    audio_bytes = narrate_recipe(recipe["title"], recipe["steps"]) if step is None else narrate_step(text)
+
+    return Response(content=audio_bytes, media_type="audio/mpeg")
