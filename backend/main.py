@@ -8,6 +8,7 @@ import json
 from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe
+from services.embedding_service import embed_recipe
 
 app = FastAPI()
 
@@ -70,12 +71,21 @@ def import_recipe(request: ImportRequest):
         request.user_id
     )
 
+    try:
+        embed_recipe(recipe_id)
+        embedded = True
+    except Exception as e:
+        print(f"Embedding failed: {e}")
+        embedded = False
+
     return {
         "success": True,
         "video_path": output_path,
         "caption": caption,
         "extracted_recipe": extracted,
         "verification": verification,
+        "recipe_id": recipe_id,
+        "embedded": embedded,
         "recipe_id": recipe_id
     }
 

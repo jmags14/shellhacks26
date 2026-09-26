@@ -136,13 +136,32 @@ def get_recipe(recipe_id: str, owner_id: str):
 
     cur.execute(
         """
-        SELECT step_number, instruction
-        FROM recipe_instructions
-        WHERE recipe_id = %s
-        ORDER BY step_number
+        INSERT INTO recipes (title, description, source, source_url, owner_id, cuisine, servings, prep_time_minutes, cook_time_minutes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (title) DO UPDATE
+        SET source_url = EXCLUDED.source_url,
+            owner_id = EXCLUDED.owner_id,
+            description = EXCLUDED.description,
+            cuisine = EXCLUDED.cuisine,
+            servings = EXCLUDED.servings,
+            prep_time_minutes = EXCLUDED.prep_time_minutes,
+            cook_time_minutes = EXCLUDED.cook_time_minutes
+        RETURNING id
         """,
-        (recipe_id,)
+        (
+            extracted["title"],
+            extracted.get("description"),
+            "instagram",
+            source_url,
+            owner_id,
+            extracted.get("cuisine"),
+            extracted.get("servings"),
+            extracted.get("prep_time_minutes"),
+            extracted.get("cook_time_minutes")
+        )
     )
+
+    recipe_id = cur.fetchone()[0]
 
     recipe["steps"] = [r[1] for r in cur.fetchall()]
 
