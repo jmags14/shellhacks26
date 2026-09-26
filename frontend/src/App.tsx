@@ -1,0 +1,30 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import LoginPage from './pages/LoginPage'
+import HomePage from './pages/HomePage'
+import SharePage from './pages/SharePage'
+import RecipeDetailPage from './pages/RecipeDetailPage'
+import ProtectedRoute from './components/ProtectedRoute'
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route path="/" element={
+          <ProtectedRoute><HomePage /></ProtectedRoute>
+        } />
+        <Route path="/share" element={
+          <ProtectedRoute><SharePage /></ProtectedRoute>
+        } />
+        <Route path="/recipe/:id" element={
+          <ProtectedRoute><RecipeDetailPage /></ProtectedRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App
