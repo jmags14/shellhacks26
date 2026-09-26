@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../lib/auth'
 
@@ -7,6 +7,7 @@ type Mode = null | 'login' | 'signup'
 
 export default function LoginPage() {
   const { user, loading } = useUser()
+  const from = (useLocation().state as { from?: string } | null)?.from ?? '/'
   const [mode, setMode] = useState<Mode>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -15,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  if (!loading && user) return <Navigate to="/" replace />
+  if (!loading && user) return <Navigate to={from} replace />
 
   function selectMode(m: Mode) {
     setMode(m)

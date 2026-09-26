@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import { useUser } from '../lib/auth'
 import { api, type Friend, type RecipeSummary } from '../lib/api'
+import { dismissImport, useImportJobs } from '../lib/importQueue'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -10,6 +11,8 @@ export default function HomePage() {
   const [query, setQuery] = useState('')
   const [backendUp, setBackendUp] = useState<boolean | null>(null)
 
+  const importJobs = useImportJobs()
+  const doneImports = importJobs.filter(j => j.status === 'done').length
   const [friends, setFriends] = useState<Friend[]>([])
   const [recipes, setRecipes] = useState<RecipeSummary[]>([])
   const [recipesLoading, setRecipesLoading] = useState(true)
@@ -27,7 +30,8 @@ export default function HomePage() {
       .then(res => setRecipes(res.recipes))
       .catch(() => setRecipesError('Could not load recipes.'))
       .finally(() => setRecipesLoading(false))
-  }, [user])
+    // Refetch when a background import finishes so the new recipe appears.
+  }, [user, doneImports])
 
   const filtered = recipes.filter(r =>
     query.length < 2 ||
@@ -88,6 +92,18 @@ export default function HomePage() {
               + Add
             </button>
           </div>
+
+          {importJobs.filter(j => j.status !== 'done').map(job => (
+            <div
+              key={job.id}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem', padding: '0.75rem 1rem', borderRadius: '10px', fontSize: '0.85rem', background: job.status === 'error' ? '#fef2f2' : '#fdf2f8', border: `1px solid ${job.status === 'error' ? '#fecaca' : '#fbcfe8'}`, color: job.status === 'error' ? '#b91c1c' : '#3D2B1F' }}
+            >
+              <span>{job.status === 'error' ? `Couldn't import that recipe. ${job.error ?? ''}` : 'Importing your recipe… this can take a minute.'}</span>
+              {job.status === 'error' && (
+                <button onClick={() => dismissImport(job.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: '600', padding: 0 }}>Dismiss</button>
+              )}
+            </div>
+          ))}
 
           {recipesLoading ? (
             <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Loading recipes…</p>

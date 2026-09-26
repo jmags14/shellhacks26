@@ -3,14 +3,18 @@ import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
-  // Shared .env (VITE_SUPABASE_URL, etc.) lives at the repo root, one level up.
+  // Your shared .env is one folder above frontend
   envDir: '../',
+
   server: {
     host: true,
-    // Forward /api/* to the FastAPI backend, stripping the /api prefix
-    // (so /api/recipes/1 -> http://localhost:8000/recipes/1). Same-origin, so no CORS.
+
+    // Let HTTPS tunnels (used to test the PWA on a phone) reach the dev server.
+    allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok-free.dev', '.ngrok.io'],
+
+    // During development:
+    // /api/... -> FastAPI running on localhost:8000
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
@@ -19,20 +23,33 @@ export default defineConfig({
       },
     },
   },
+
   plugins: [
     react(),
     tailwindcss(),
+
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+
+      // Serve the manifest + service worker from `npm run dev` too.
+      // Without this, the dev server has no service worker, so Android
+      // never offers "Install app".
+      devOptions: {
+        enabled: true,
+      },
+
       manifest: {
         name: 'Doomscroll & Dine',
         short_name: 'Doomscroll & Dine',
-        description: 'Turn saved TikTok/Instagram recipes into dinner plans with your friends.',
+        description:
+          'Turn saved TikTok/Instagram recipes into dinner plans with your friends.',
+
         start_url: '/',
         display: 'standalone',
+
         background_color: '#ffffff',
         theme_color: '#000000',
+
         icons: [
           {
             src: '/pwa-192x192.png',
@@ -44,13 +61,21 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
           },
+          {
+            src: '/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
-        // Android: makes this installed app appear as a share target in
-        // Instagram/TikTok's native share sheet.
+
+        // THIS is what allows Android to show
+        // Doomscroll & Dine in the Share menu.
         share_target: {
           action: '/share',
           method: 'GET',
           enctype: 'application/x-www-form-urlencoded',
+
           params: {
             title: 'title',
             text: 'text',

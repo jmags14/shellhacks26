@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
+import sys
 import os
 import uuid
 from uuid import UUID
@@ -9,12 +10,11 @@ import json
 from agents.cook_together.workflow import cook_together
 from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
-from agents.import_recipe.save_service import save_recipe, get_recipe
+from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe
 from services.embedding_service import embed_recipe
 from agents.import_recipe.price_agent import estimate_recipe_price
 from services.recipe_service import list_recipes_for_user
 from services.friend_service import list_friends
-from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe
 from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
 
 app = FastAPI()
@@ -62,15 +62,14 @@ async def create_cook_together(
 
     return result
 
-@app.post("/import")
-def import_recipe(request: ImportRequest):
+def run_import(url: str, user_id: str) -> dict:
     os.makedirs("downloads", exist_ok=True)
 
     video_id = str(uuid.uuid4())
     output_path = f"downloads/{video_id}.mp4"
 
     download_result = subprocess.run(
-        ["yt-dlp", "-o", output_path, request.url],
+        [sys.executable, "-m", "yt_dlp", "-o", output_path, url],
         capture_output=True,
         text=True
     )
@@ -82,7 +81,7 @@ def import_recipe(request: ImportRequest):
         }
 
     info_result = subprocess.run(
-        ["yt-dlp", "--dump-json", request.url],
+        [sys.executable, "-m", "yt_dlp", "--dump-json", url],
         capture_output=True,
         text=True
     )
@@ -106,8 +105,8 @@ def import_recipe(request: ImportRequest):
 
     recipe_id = save_recipe(
         extracted,
-        request.url,
-        request.user_id
+        url,
+        user_id
     )
 
     try:
@@ -126,6 +125,56 @@ def import_recipe(request: ImportRequest):
         "recipe_id": recipe_id,
         "embedded": embedded,
     }
+
+
+@app.post("/import")
+def import_recipe(request: ImportRequest):
+    return run_import(request.url, request.user_id)
+
+
+# In-memory job table for background imports (lost on server restart).
+# job_id -> {"status": "running" | "done" | "error", "recipe_id": str | None, "error": str | None}
+IMPORT_JOBS: dict[str, dict] = {}
+
+
+def _run_import_job(job_id: str, url: str, user_id: str):
+    try:
+        result = run_import(url, user_id)
+    except Exception as e:
+        IMPORT_JOBS[job_id] = {"status": "error", "recipe_id": None, "error": str(e)}
+        return
+
+    if result.get("success"):
+        IMPORT_JOBS[job_id] = {
+            "status": "done",
+            "recipe_id": result.get("recipe_id"),
+            "error": None,
+        }
+    else:
+        IMPORT_JOBS[job_id] = {
+            "status": "error",
+            "recipe_id": None,
+            "error": result.get("error") or "Import failed",
+        }
+
+
+@app.post("/import/start")
+def start_import(request: ImportRequest, background_tasks: BackgroundTasks):
+    """Kick off an import and return immediately; poll /import/status/{job_id}."""
+    job_id = str(uuid.uuid4())
+    IMPORT_JOBS[job_id] = {"status": "running", "recipe_id": None, "error": None}
+    background_tasks.add_task(_run_import_job, job_id, request.url, request.user_id)
+    return {"success": True, "job_id": job_id}
+
+
+@app.get("/import/status/{job_id}")
+def import_status(job_id: str):
+    job = IMPORT_JOBS.get(job_id)
+
+    if job is None:
+        return {"success": False, "status": "error", "error": "Unknown import job"}
+
+    return {"success": True, **job}
 
 
 @app.get("/friends")

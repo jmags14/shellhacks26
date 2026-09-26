@@ -1,5 +1,42 @@
-// SEEDED DATA — remove before final demo
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { supabase } from './supabase'
+import { SEEDED_FRIENDS, SEEDED_RECIPES } from './seededData'
+
+// In dev, '/api' is proxied to the FastAPI backend (see vite.config.ts).
+// Set VITE_API_URL in the root .env to point at a deployed backend instead.
+const API_URL = import.meta.env.VITE_API_URL ?? '/api'
+
+// Set VITE_USE_SEEDED_DATA=true in the root .env to use the fake recipes/friends
+// in lib/seededData.ts instead of the backend (recipes, friends only).
+const USE_SEEDED_DATA = import.meta.env.VITE_USE_SEEDED_DATA === 'true'
+
+export class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Attach the Supabase access token so the backend can identify the user
+  // (backend verification is not implemented yet).
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  })
+
+  if (!res.ok) {
+    throw new ApiError(res.status, (await res.text()) || res.statusText)
+  }
+  return res.json() as Promise<T>
+}
 
 export interface Friend {
   id: string
@@ -9,59 +46,90 @@ export interface Friend {
 
 export interface RecipeIngredient {
   name: string
-  have: boolean
+  quantity?: number | string | null
+  unit?: string | null
+  preparation?: string | null
+  optional?: boolean
+  have?: boolean // seeded data only
 }
 
 export interface RecipeSummary {
   id: string
   title: string
-  source?: string
-  source_url?: string
-  cuisine?: string
-  servings?: number
-  time_minutes?: number
+  source?: string | null
+  source_url?: string | null
+  cuisine?: string | null
+  servings?: number | null
+  time_minutes?: number | null
   ingredient_count?: number
-  cost_to_finish?: number
-  ingredients?: RecipeIngredient[]
-  steps?: string[]
 }
 
-const MOCK_RECIPES: RecipeSummary[] = [
-  {
-    id: '1', title: 'Spicy Tteokbokki', time_minutes: 25, cost_to_finish: 8,
-    ingredients: [{ name: 'rice cakes', have: true }, { name: 'gochujang', have: true }, { name: 'fish cakes', have: false }],
-    steps: ['Soak rice cakes in warm water for 20 minutes', 'Mix gochujang, soy sauce, and sugar in a bowl', 'Add fish cakes and rice cakes to a pan with the sauce', 'Simmer on medium heat for 10 minutes until sauce thickens', 'Garnish with green onions and sesame seeds'],
-  },
-  {
-    id: '2', title: 'Mango Sticky Rice', time_minutes: 30, cost_to_finish: 12,
-    ingredients: [{ name: 'glutinous rice', have: false }, { name: 'mango', have: true }, { name: 'coconut milk', have: true }],
-    steps: ['Soak glutinous rice for 4 hours then steam for 25 minutes', 'Heat coconut milk with sugar and salt until dissolved', 'Pour coconut milk mixture over cooked rice and let absorb', 'Peel and slice fresh mango', 'Plate sticky rice with mango slices and drizzle remaining coconut milk'],
-  },
-  {
-    id: '3', title: 'Birria Tacos', time_minutes: 45, cost_to_finish: 15,
-    ingredients: [{ name: 'beef chuck', have: false }, { name: 'dried chiles', have: false }, { name: 'corn tortillas', have: true }],
-    steps: ['Toast dried chiles in a dry pan then soak in hot water for 15 minutes', 'Blend chiles with garlic, cumin, and oregano into a paste', 'Coat beef chuck in chile paste and marinate 1 hour', 'Braise beef in broth for 3 hours until tender', 'Shred beef, dip tortillas in the broth, and fry until crispy', 'Fill tacos with beef and serve with consommé for dipping'],
-  },
-]
-
-export async function getRecipe(id: string): Promise<RecipeSummary | null> {
-  return MOCK_RECIPES.find(r => r.id === id) ?? null
+export interface RecipeDetail extends RecipeSummary {
+  description?: string | null
+  ingredients: RecipeIngredient[]
+  steps: string[]
+  cost_to_finish?: number // seeded data only
 }
 
-export async function listFriends(_userId: string): Promise<{ friends: Friend[] }> {
-  return { friends: [{ id: 'f1', name: 'Maya' }, { id: 'f2', name: 'Jordan' }] }
+export async function listFriends(userId: string): Promise<{ friends: Friend[] }> {
+  if (USE_SEEDED_DATA) return { friends: SEEDED_FRIENDS }
+
+  const res = await request<{ friends: { id: string; username: string; taste?: string }[] }>(
+    `/friends?user_id=${encodeURIComponent(userId)}`,
+  )
+  return { friends: res.friends.map(f => ({ id: f.id, name: f.username, taste: f.taste })) }
+}
+
+export async function listRecipes(userId: string): Promise<{ recipes: RecipeSummary[] }> {
+  if (USE_SEEDED_DATA) {
+    return {
+      recipes: SEEDED_RECIPES.map(r => ({ ...r, ingredient_count: r.ingredients.length })),
+    }
+  }
+
+  const res = await request<{ recipes: RecipeSummary[] }>(
+    `/recipes?user_id=${encodeURIComponent(userId)}`,
+  )
+  return { recipes: res.recipes }
+}
+
+export async function getRecipe(recipeId: string, userId: string): Promise<RecipeDetail | null> {
+  if (USE_SEEDED_DATA) return SEEDED_RECIPES.find(r => r.id === recipeId) ?? null
+
+  const res = await request<{ success: boolean; recipe?: RecipeDetail }>(
+    `/recipes/${recipeId}?user_id=${encodeURIComponent(userId)}`,
+  )
+  return res.success && res.recipe ? res.recipe : null
 }
 
 export const api = {
-  health: () =>
-    fetch(`${BASE_URL}/`).then(r => { if (!r.ok) throw new Error('unhealthy'); return r.json() }),
+  health: () => request<{ status: string }>('/'),
 
-  listFriends: (_userId: string): Promise<{ friends: Friend[] }> =>
-    Promise.resolve({ friends: [
-      { id: 'f1', name: 'Maya' },
-      { id: 'f2', name: 'Jordan' },
-    ]}),
+  listFriends,
+  listRecipes,
+  getRecipe,
 
-  listRecipes: (_userId: string): Promise<{ recipes: RecipeSummary[] }> =>
-    Promise.resolve({ recipes: MOCK_RECIPES }),
+  // Background import: returns a job id right away; poll importStatus for the result.
+  startImport: (url: string, userId: string) =>
+    request<{ success: boolean; job_id: string }>('/import/start', {
+      method: 'POST',
+      body: JSON.stringify({ url, user_id: userId }),
+    }),
+
+  importStatus: (jobId: string) =>
+    request<{ success: boolean; status: 'running' | 'done' | 'error'; recipe_id?: string | null; error?: string | null }>(
+      `/import/status/${jobId}`,
+    ),
+
+  importRecipe: (url: string, userId: string) =>
+    request<{ success: boolean; recipe_id?: string; error?: string }>('/import', {
+      method: 'POST',
+      body: JSON.stringify({ url, user_id: userId }),
+    }),
+
+  cookTogether: (userIds: string[], intent?: string) =>
+    request<unknown>('/cook-together', {
+      method: 'POST',
+      body: JSON.stringify({ user_ids: userIds, intent }),
+    }),
 }

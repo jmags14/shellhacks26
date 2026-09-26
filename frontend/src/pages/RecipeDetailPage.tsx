@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { getRecipe, listFriends, type Friend, type RecipeSummary } from '../lib/api'
+import { getRecipe, listFriends, type Friend, type RecipeDetail } from '../lib/api'
 
 export default function RecipeDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useUser()
-  const [recipe, setRecipe] = useState<RecipeSummary | null>(null)
+  const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [loadError, setLoadError] = useState('')
   const [friends, setFriends] = useState<Friend[]>([])
 
@@ -25,7 +25,7 @@ export default function RecipeDetailPage() {
 
   useEffect(() => {
     if (!user || !id) return
-    getRecipe(id)
+    getRecipe(id, user.id)
       .then(res => {
         if (res) setRecipe(res)
         else setLoadError('Recipe not found.')
