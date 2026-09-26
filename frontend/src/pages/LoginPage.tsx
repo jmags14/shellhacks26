@@ -49,74 +49,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', padding: '2rem', background: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden',
+      margin: 0, padding: '2rem',
+      background: 'linear-gradient(to bottom, #ffffff 40%, #FAAED2 100%)',
+      fontFamily: 'system-ui, sans-serif',
+    }}>
 
-      {/* Logo + Tagline */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '1rem', gap: '0.5rem' }}>
+      {/* Logo */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '2rem' }}>
         <img
-          src="/logo.jpg"
+          src="/logo.png"
           alt="Doomscroll & Dine"
-          style={{ width: '180px', display: 'block' }}
+          style={{ width: '280px', display: 'block', mixBlendMode: 'multiply' }}
         />
-        <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', fontStyle: 'italic', color: '#F8CE5B', textAlign: 'center' }}>
-          Your FYP is now your meal plan.
+      </div>
+
+      {/* WELCOME + tagline */}
+      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: '800', color: '#3D2B1F', letterSpacing: '0.1em', fontFamily: 'Bebas Neue, sans-serif' }}>
+          WELCOME
+        </p>
+        <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', fontWeight: '600', fontStyle: 'italic', color: '#fff' }}>
+          Your FYP is now your meal plan.<br />Scroll, save, and cook with friends.
         </p>
       </div>
 
-      {/* Form — shown after a mode is selected */}
+      {/* Form — shown after mode selected */}
       {mode && (
-        <div style={{ width: '100%', maxWidth: '360px', alignSelf: 'center', marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ width: '100%', maxWidth: '360px', alignSelf: 'center', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {mode === 'signup' && (
-              <input
-                type="text"
-                required
-                placeholder="Name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={inputStyle}
-              />
+              <input type="text" required placeholder="Name" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
             )}
-            <input
-              type="email"
-              required
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              required
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={inputStyle}
-            />
+            <input type="email" required placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
+            <input type="password" required placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
             {mode === 'signup' && (
-              <input
-                type="password"
-                required
-                placeholder="Confirm Password"
-                value={confirm}
-                onChange={e => setConfirm(e.target.value)}
-                style={inputStyle}
-              />
+              <input type="password" required placeholder="Confirm Password" value={confirm} onChange={e => setConfirm(e.target.value)} style={inputStyle} />
             )}
             <button
               type="submit"
               style={{
-                width: '100%', padding: '0.75rem',
+                width: '100%', padding: '0.65rem',
                 background: mode === 'login' ? '#FAAED2' : '#F8CE5B',
-                color: '#5C2D2D',
-                border: 'none', borderRadius: '12px',
+                color: '#3D2B1F', border: 'none', borderRadius: '12px',
                 fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer',
               }}
             >
               {mode === 'login' ? 'Log In' : 'Sign Up'}
             </button>
           </form>
-
           {error && <p style={{ color: '#ef4444', textAlign: 'center', margin: 0 }} role="alert">{error}</p>}
           {success && <p style={{ color: '#2F6B4F', textAlign: 'center', margin: 0 }}>{success}</p>}
         </div>
@@ -125,16 +107,15 @@ export default function LoginPage() {
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Mode buttons */}
+      {/* Buttons */}
       <div style={{ display: 'flex', gap: '0.75rem' }}>
         <button
           onClick={() => selectMode('login')}
           style={{
-            flex: 1, padding: '0.65rem',
-            background: '#FAAED2', color: '#5C2D2D',
-            border: mode === 'login' ? '2px solid #d4608a' : '2px solid transparent',
-            borderRadius: '12px',
-            fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer',
+            flex: 1, padding: '0.5rem 1rem',
+            background: '#FAAED2', color: '#3D2B1F',
+            border: '1.5px solid #d4608a', boxShadow: '0 2px 8px rgba(212, 96, 138, 0.3)',
+            borderRadius: '12px', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer',
           }}
         >
           Log In
@@ -142,11 +123,10 @@ export default function LoginPage() {
         <button
           onClick={() => selectMode('signup')}
           style={{
-            flex: 1, padding: '0.65rem',
-            background: '#F8CE5B', color: '#5C2D2D',
-            border: mode === 'signup' ? '2px solid #c9a000' : '2px solid transparent',
-            borderRadius: '12px',
-            fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer',
+            flex: 1, padding: '0.5rem 1rem',
+            background: '#F8CE5B', color: '#3D2B1F',
+            border: '1.5px solid #c9a000', boxShadow: '0 2px 8px rgba(201, 160, 0, 0.3)',
+            borderRadius: '12px', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer',
           }}
         >
           Sign Up
