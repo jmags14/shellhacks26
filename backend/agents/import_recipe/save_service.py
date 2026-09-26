@@ -151,7 +151,7 @@ def get_recipe(recipe_id: str, owner_id: str):
         (
             extracted["title"],
             extracted.get("description"),
-            "instagram",
+            extracted.get("cuisine"),
             source_url,
             owner_id,
             extracted.get("cuisine"),

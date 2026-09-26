@@ -10,6 +10,7 @@ from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe
 from services.embedding_service import embed_recipe
+from agents.import_recipe.price_agent import estimate_recipe_price
 
 app = FastAPI()
 
@@ -127,3 +128,14 @@ def get_recipe_route(recipe_id: str, user_id: str):
         "success": True,
         "recipe": recipe
     }
+
+@app.get("/recipes/{recipe_id}/price")
+def get_recipe_price(recipe_id: str, user_id: str):
+    recipe = get_recipe(recipe_id, user_id)
+
+    if recipe is None:
+        return {"success": False, "error": "Recipe not found"}
+
+    price_estimate = estimate_recipe_price(recipe["ingredients"])
+
+    return {"success": True, "price_estimate": price_estimate}

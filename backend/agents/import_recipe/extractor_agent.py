@@ -41,7 +41,7 @@ Return ONLY valid JSON with this exact shape, no other text:
       "name": "string (just the ingredient name, no quantity/unit/prep)",
       "quantity": number or null,
       "unit": "string or null (e.g. tbsp, tsp, cup, lb, oz, g)",
-      "preparation": "string or null (e.g. minced, diced, cubed; if quantity/unit was visually estimated rather than stated, append ' (approximate)')",
+      "preparation": "string or null (e.g. minced, diced, cubed). ONLY append ' (approximate)' if you filled in a quantity/unit that was NOT stated or clearly shown with a number — do not add it if quantity and unit are both null, and do not add it as a generic filler.",
       "optional": true or false
     }}
   ],
