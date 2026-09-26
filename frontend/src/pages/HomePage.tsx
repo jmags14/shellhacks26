@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import BottomNav from '../components/BottomNav'
 import { useUser } from '../lib/auth'
 import { api, type Friend, type RecipeSummary } from '../lib/api'
 
@@ -35,7 +36,7 @@ export default function HomePage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, sans-serif', paddingBottom: '80px' }}>
 
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -130,6 +131,7 @@ export default function HomePage() {
         </button>
 
       </div>
+      <BottomNav />
     </div>
   )
 }
