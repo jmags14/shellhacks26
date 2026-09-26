@@ -4,12 +4,11 @@ import subprocess
 import os
 import uuid
 import json
-from google import genai
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+from agents.import_recipe.extractor_agent import extract_recipe
+from agents.import_recipe.verifier_agent import verify_recipe
+from agents.import_recipe.save_service import save_recipe, get_recipe
+
 
 app = FastAPI()
 
@@ -48,82 +47,22 @@ def import_recipe(request: ImportRequest):
     metadata = json.loads(info_result.stdout)
     caption = metadata.get("description", "")
 
-    extracted = extract_recipe(caption)
-    verification = verify_recipe(caption, extracted)
+    extracted = extract_recipe(caption, output_path)
+    verification = verify_recipe(caption, extracted, output_path)
+    recipe_id = save_recipe(extracted, request.url)
 
     return {
         "success": True,
         "video_path": output_path,
         "caption": caption,
         "extracted_recipe": extracted,
-        "verification": verification
+        "verification": verification,
+        "recipe_id": recipe_id
     }
 
-def extract_recipe(caption: str):
-    prompt = f"""
-Extract a structured recipe from this Instagram caption.
-Return ONLY valid JSON with this exact shape, no other text:
-
-{{
-  "title": "string",
-  "ingredients": ["string", ...],
-  "steps": ["string", ...]
-}}
-
-Caption:
-{caption}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt
-    )
-
-    text = response.text.strip()
-
-    # Remove markdown code fences if Gemini added them
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-
-    return json.loads(text.strip())
-
-def verify_recipe(caption: str, extracted: dict):
-    prompt = f"""
-You are checking a recipe extraction for accuracy against its source caption.
-
-Source caption:
-{caption}
-
-Extracted recipe (JSON):
-{json.dumps(extracted)}
-
-Check every ingredient and step against the source caption.
-Flag anything that was invented, guessed, or not clearly stated in the caption
-(e.g. an amount that wasn't specified, a step that was inferred rather than stated).
-
-Return ONLY valid JSON with this exact shape, no other text:
-
-{{
-  "flags": [
-    {{"field": "string describing what's flagged", "reason": "string"}}
-  ],
-  "verified": true or false
-}}
-
-If nothing is questionable, return "flags": [] and "verified": true.
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt
-    )
-
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-
-    return json.loads(text.strip())
+@app.get("/recipes/{recipe_id}")
+def get_recipe_route(recipe_id: str):
+    recipe = get_recipe(recipe_id)
+    if recipe is None:
+        return {"success": False, "error": "Recipe not found"}
+    return {"success": True, "recipe": recipe}
