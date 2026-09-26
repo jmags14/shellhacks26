@@ -3,6 +3,8 @@ import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import SharePage from './pages/SharePage'
 import RecipeDetailPage from './pages/RecipeDetailPage'
+import CookTogetherPage from './pages/CookTogetherPage'
+import RecommendedPage from './pages/RecommendedPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -19,6 +21,12 @@ function App() {
         } />
         <Route path="/recipe/:id" element={
           <ProtectedRoute><RecipeDetailPage /></ProtectedRoute>
+        } />
+        <Route path="/cook-together" element={
+          <ProtectedRoute><CookTogetherPage /></ProtectedRoute>
+        } />
+        <Route path="/recommended" element={
+          <ProtectedRoute><RecommendedPage /></ProtectedRoute>
         } />
 
         <Route path="*" element={<Navigate to="/" replace />} />
