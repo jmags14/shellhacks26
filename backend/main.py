@@ -4,6 +4,12 @@ import subprocess
 import os
 import uuid
 import json
+from google import genai
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
@@ -21,7 +27,6 @@ def import_recipe(request: ImportRequest):
     video_id = str(uuid.uuid4())
     output_path = f"downloads/{video_id}.mp4"
 
-    # Download the video
     download_result = subprocess.run(
         ["yt-dlp", "-o", output_path, request.url],
         capture_output=True,
@@ -31,7 +36,6 @@ def import_recipe(request: ImportRequest):
     if download_result.returncode != 0:
         return {"success": False, "error": download_result.stderr}
 
-    # Get the metadata (caption, etc.) as JSON
     info_result = subprocess.run(
         ["yt-dlp", "--dump-json", request.url],
         capture_output=True,
@@ -44,8 +48,33 @@ def import_recipe(request: ImportRequest):
     metadata = json.loads(info_result.stdout)
     caption = metadata.get("description", "")
 
+    extracted = extract_recipe(caption)
+
     return {
         "success": True,
         "video_path": output_path,
-        "caption": caption
+        "caption": caption,
+        "extracted_recipe": extracted
     }
+
+def extract_recipe(caption: str):
+    prompt = f"""
+Extract a structured recipe from this Instagram caption.
+Return ONLY valid JSON with this exact shape, no other text:
+
+{{
+  "title": "string",
+  "ingredients": ["string", ...],
+  "steps": ["string", ...]
+}}
+
+Caption:
+{caption}
+"""
+
+    response = client.models.generate_content(
+        model="gemini-3.8-flash",
+        contents=prompt
+    )
+
+    return response.text
