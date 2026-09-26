@@ -60,3 +60,50 @@ def save_recipe(extracted: dict, source_url: str):
     conn.close()
 
     return str(recipe_id)
+
+def get_recipe(recipe_id: str):
+    conn = psycopg.connect(os.getenv("DATABASE_URL"))
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT id, title, source, source_url FROM recipes WHERE id = %s",
+        (recipe_id,)
+    )
+    row = cur.fetchone()
+
+    if row is None:
+        cur.close()
+        conn.close()
+        return None
+
+    recipe = {
+        "id": str(row[0]),
+        "title": row[1],
+        "source": row[2],
+        "source_url": row[3]
+    }
+
+    cur.execute(
+        """
+        SELECT i.name, ri.quantity, ri.unit, ri.preparation, ri.optional
+        FROM recipe_ingredients ri
+        JOIN ingredients i ON i.id = ri.ingredient_id
+        WHERE ri.recipe_id = %s
+        """,
+        (recipe_id,)
+    )
+    recipe["ingredients"] = [
+        {"name": r[0], "quantity": r[1], "unit": r[2], "preparation": r[3], "optional": r[4]}
+        for r in cur.fetchall()
+    ]
+
+    cur.execute(
+        "SELECT step_number, instruction FROM recipe_instructions WHERE recipe_id = %s ORDER BY step_number",
+        (recipe_id,)
+    )
+    recipe["steps"] = [r[1] for r in cur.fetchall()]
+
+    cur.close()
+    conn.close()
+
+    return recipe

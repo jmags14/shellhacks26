@@ -6,9 +6,9 @@ import json
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-def verify_recipe(caption: str, extracted: dict):
+def verify_recipe(caption: str, extracted: dict, video_path: str = None):
     prompt = f"""
-You are checking a recipe extraction for accuracy against its source caption.
+You are checking a recipe extraction for accuracy against its source (caption AND video).
 
 Source caption:
 {caption}
@@ -16,9 +16,9 @@ Source caption:
 Extracted recipe (JSON):
 {json.dumps(extracted)}
 
-Check every ingredient and step against the source caption.
-Flag anything that was invented, guessed, or not clearly stated in the caption
-(e.g. an amount that wasn't specified, a step that was inferred rather than stated).
+Check every ingredient and step against BOTH the caption text and the video content
+(the creator may have spoken steps or shown ingredients that aren't in the caption).
+Only flag something if it's NOT supported by the caption OR the video.
 
 Return ONLY valid JSON with this exact shape, no other text:
 
@@ -32,9 +32,15 @@ Return ONLY valid JSON with this exact shape, no other text:
 If nothing is questionable, return "flags": [] and "verified": true.
 """
 
+    contents = [prompt]
+
+    if video_path:
+        video_file = client.files.upload(file=video_path)
+        contents.append(video_file)
+
     response = client.models.generate_content(
         model="gemini-3.5-flash-lite",
-        contents=prompt
+        contents=contents
     )
 
     text = response.text.strip()

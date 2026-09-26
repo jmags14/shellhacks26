@@ -7,7 +7,8 @@ import json
 
 from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
-from agents.import_recipe.save_service import save_recipe
+from agents.import_recipe.save_service import save_recipe, get_recipe
+
 
 app = FastAPI()
 
@@ -46,8 +47,8 @@ def import_recipe(request: ImportRequest):
     metadata = json.loads(info_result.stdout)
     caption = metadata.get("description", "")
 
-    extracted = extract_recipe(caption)
-    verification = verify_recipe(caption, extracted)
+    extracted = extract_recipe(caption, output_path)
+    verification = verify_recipe(caption, extracted, output_path)
     recipe_id = save_recipe(extracted, request.url)
 
     return {
@@ -58,3 +59,10 @@ def import_recipe(request: ImportRequest):
         "verification": verification,
         "recipe_id": recipe_id
     }
+
+@app.get("/recipes/{recipe_id}")
+def get_recipe_route(recipe_id: str):
+    recipe = get_recipe(recipe_id)
+    if recipe is None:
+        return {"success": False, "error": "Recipe not found"}
+    return {"success": True, "recipe": recipe}
