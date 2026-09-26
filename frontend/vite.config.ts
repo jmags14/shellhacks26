@@ -9,6 +9,15 @@ export default defineConfig({
   envDir: '../',
   server: {
     host: true,
+    // Forward /api/* to the FastAPI backend, stripping the /api prefix
+    // (so /api/recipes/1 -> http://localhost:8000/recipes/1). Same-origin, so no CORS.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
   plugins: [
     react(),

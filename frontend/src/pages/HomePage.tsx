@@ -1,17 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { MOCK_RECIPES, MOCK_FRIENDS } from '../lib/mockData'
+import { api, type RecipeSummary } from '../lib/api'
+import { MOCK_FRIENDS } from '../lib/mockData'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const { user, signOut } = useUser()
   const [query, setQuery] = useState('')
+  const [backendUp, setBackendUp] = useState<boolean | null>(null)
 
-  const filtered = MOCK_RECIPES.filter(r =>
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([])
+  const [recipesLoading, setRecipesLoading] = useState(true)
+  const [recipesError, setRecipesError] = useState('')
+
+  // Temporary connectivity check against the FastAPI backend.
+  useEffect(() => {
+    api.health().then(() => setBackendUp(true)).catch(() => setBackendUp(false))
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    api.listRecipes(user.id)
+      .then(res => setRecipes(res.recipes))
+      .catch(() => setRecipesError('Could not load recipes.'))
+      .finally(() => setRecipesLoading(false))
+  }, [user])
+
+  const filtered = recipes.filter(r =>
     query.length < 2 ||
     r.title.toLowerCase().includes(query.toLowerCase()) ||
-    r.tags.some(t => t.includes(query.toLowerCase()))
+    (r.cuisine ?? '').toLowerCase().includes(query.toLowerCase())
   )
 
   return (
@@ -21,6 +40,10 @@ export default function HomePage() {
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: '400', fontFamily: 'Bebas Neue, sans-serif', color: '#1a1a1a' }}>Doomscroll &amp; Dine</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span
+            title={backendUp === null ? 'Checking backend…' : backendUp ? 'Backend connected' : 'Backend unreachable'}
+            style={{ width: '8px', height: '8px', borderRadius: '50%', background: backendUp === null ? '#9ca3af' : backendUp ? '#22c55e' : '#ef4444' }}
+          />
           <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{user?.user_metadata?.full_name?.split(' ')[0] ?? user?.email}</span>
           <button onClick={signOut} style={{ fontSize: '0.8rem', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             Sign out
@@ -63,40 +86,40 @@ export default function HomePage() {
             </button>
           </div>
 
-          {filtered.length === 0 ? (
-            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>No recipes match that.</p>
+          {recipesLoading ? (
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Loading recipes…</p>
+          ) : recipesError ? (
+            <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>{recipesError}</p>
+          ) : filtered.length === 0 ? (
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+              {recipes.length === 0 ? 'No recipes yet — tap + Add.' : 'No recipes match that.'}
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {filtered.map(recipe => {
-                const haveCount = recipe.ingredients.filter(i => i.have).length
-                return (
-                  <button
-                    key={recipe.id}
-                    onClick={() => navigate(`/recipe/${recipe.id}`)}
-                    style={{ textAlign: 'left', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', cursor: 'pointer', width: '100%' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                      <div>
-                        <p style={{ margin: '0 0 0.25rem', fontWeight: '600', fontSize: '0.95rem', color: '#111827' }}>{recipe.title}</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
-                          saved by {recipe.saved_by} · {recipe.time_minutes} min
-                        </p>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <p style={{ margin: '0 0 0.2rem', fontSize: '0.8rem', fontWeight: '600', color: '#2F6B4F' }}>${recipe.cost_to_finish} to finish</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>{haveCount}/{recipe.ingredients.length} ingredients</p>
-                      </div>
+              {filtered.map(recipe => (
+                <button
+                  key={recipe.id}
+                  onClick={() => navigate(`/recipe/${recipe.id}`)}
+                  style={{ textAlign: 'left', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', cursor: 'pointer', width: '100%' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                    <div>
+                      <p style={{ margin: '0 0 0.25rem', fontWeight: '600', fontSize: '0.95rem', color: '#111827' }}>{recipe.title}</p>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
+                        {[recipe.cuisine, recipe.time_minutes && `${recipe.time_minutes} min`].filter(Boolean).join(' · ') || recipe.source}
+                      </p>
                     </div>
-                  </button>
-                )
-              })}
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280', flexShrink: 0 }}>{recipe.ingredient_count} ingredients</p>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </section>
 
         {/* Cook Together CTA */}
         <button
-          onClick={() => navigate('/recipe/1')}
+          onClick={() => recipes[0] && navigate(`/recipe/${recipes[0].id}`)}
           style={{ width: '100%', padding: '0.875rem', background: '#2F6B4F', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer' }}
         >
           Cook Together

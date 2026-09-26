@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
 import os
@@ -10,8 +11,19 @@ from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe
 from services.embedding_service import embed_recipe
+from services.recipe_service import list_recipes_for_user
 
 app = FastAPI()
+
+# Allow the Vite dev server (localhost or a LAN IP, e.g. testing on a phone)
+# to call the API directly. The Vite proxy in vite.config.ts avoids CORS too.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):5173",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -110,6 +122,14 @@ def import_recipe(request: ImportRequest):
         "recipe_id": recipe_id,
         "embedded": embedded,
         "recipe_id": recipe_id
+    }
+
+
+@app.get("/recipes")
+def list_recipes_route(user_id: str):
+    return {
+        "success": True,
+        "recipes": list_recipes_for_user(user_id)
     }
 
 
