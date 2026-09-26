@@ -148,6 +148,7 @@ def save_recipe(extracted: dict, source_url: str):
         """
         INSERT INTO recipes (title, source, source_url)
         VALUES (%s, %s, %s)
+        ON CONFLICT (title) DO UPDATE SET source_url = EXCLUDED.source_url
         RETURNING id
         """,
         (extracted["title"], "instagram", source_url)
