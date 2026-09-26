@@ -23,7 +23,6 @@ export default function RecipeDetailPage() {
   async function startCookTogether() {
     setAgentRunning(true)
     setAgentLogs([])
-    // TODO: replace with real SSE from POST /cook-together
     const events = [
       'Starting Personal Agents for each friend…',
       `Rachel's agent: no allergy conflicts found`,
@@ -42,79 +41,104 @@ export default function RecipeDetailPage() {
     setAgentRunning(false)
   }
 
+  const tabBtn = (t: 'ingredients' | 'steps') => ({
+    flex: 1, padding: '0.6rem', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
+    background: tab === t ? '#2F6B4F' : '#fff',
+    color: tab === t ? '#fff' : '#6b7280',
+    borderRadius: t === 'ingredients' ? '8px 0 0 8px' : '0 8px 8px 0',
+    borderTop: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db',
+    borderLeft: t === 'ingredients' ? '1px solid #d1d5db' : 'none',
+    borderRight: t === 'steps' ? '1px solid #d1d5db' : 'none',
+  })
+
   return (
-    <div>
-      <button onClick={() => navigate(-1)}>← Back</button>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-      <h1>{recipe.title}</h1>
-      <p>Saved by {recipe.saved_by} · {recipe.time_minutes} min · serves {recipe.serves}</p>
-      <a href={recipe.source_url} target="_blank" rel="noreferrer">View original</a>
-
-      <p>
-        You have {haveCount}/{recipe.ingredients.length} ingredients —{' '}
-        ${recipe.cost_to_finish.toFixed(2)} to finish
-      </p>
-
-      {/* Tabs */}
-      <div role="tablist">
-        <button role="tab" aria-selected={tab === 'ingredients'} onClick={() => setTab('ingredients')}>
-          Ingredients
-        </button>
-        <button role="tab" aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>
-          Steps
-        </button>
-      </div>
-
-      {tab === 'ingredients' ? (
-        <ul>
-          {recipe.ingredients.map(ing => (
-            <li key={ing.name}>
-              <span>{ing.have ? '✓' : '○'}</span>
-              <span>{ing.name}</span>
-              {!ing.have && <span>(need to buy)</span>}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <ol>
-          {recipe.steps.map((step, i) => (
-            <li key={i}>{step}</li>
-          ))}
-        </ol>
-      )}
-
-      {/* Cook Together */}
-      <section>
-        <h2>Cook Together</h2>
-        <p>Pick who's joining and let AI check allergies, pantries, and split the cost.</p>
-
-        <div>
-          {MOCK_FRIENDS.map(f => (
-            <label key={f.name}>
-              <input
-                type="checkbox"
-                checked={selectedFriends.includes(f.name)}
-                onChange={() => toggleFriend(f.name)}
-              />
-              {f.avatar} {f.name} — {f.taste}
-            </label>
-          ))}
+        {/* Nav */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.9rem', padding: 0 }}>← Back</button>
+          <a href={recipe.source_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.85rem', color: '#2F6B4F', fontWeight: '500' }}>View original</a>
         </div>
 
-        <button
-          onClick={startCookTogether}
-          disabled={agentRunning || selectedFriends.length === 0}
-        >
-          {agentRunning ? 'Planning…' : 'Start AI planning'}
-        </button>
+        {/* Title */}
+        <div>
+          <h1 style={{ margin: '0 0 0.4rem', fontSize: '1.5rem', fontWeight: '700' }}>{recipe.title}</h1>
+          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+            Saved by {recipe.saved_by} · {recipe.time_minutes} min · serves {recipe.serves}
+          </p>
+        </div>
 
-        {agentLogs.length > 0 && (
-          <pre>
-            {agentLogs.join('\n')}
-            {agentRunning && '\n▊'}
-          </pre>
+        {/* Ingredient progress */}
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>You have {haveCount}/{recipe.ingredients.length} ingredients</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#2F6B4F' }}>${recipe.cost_to_finish.toFixed(2)} to finish</span>
+          </div>
+          <div style={{ height: '6px', background: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(haveCount / recipe.ingredients.length) * 100}%`, background: '#2F6B4F', borderRadius: '999px' }} />
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex' }}>
+          <button style={tabBtn('ingredients')} onClick={() => setTab('ingredients')}>Ingredients</button>
+          <button style={tabBtn('steps')} onClick={() => setTab('steps')}>Steps</button>
+        </div>
+
+        {tab === 'ingredients' ? (
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {recipe.ingredients.map(ing => (
+              <li key={ing.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ing.have ? '#dcfce7' : '#f3f4f6', color: ing.have ? '#2F6B4F' : '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0 }}>
+                  {ing.have ? '✓' : '○'}
+                </span>
+                <span style={{ fontSize: '0.9rem', color: ing.have ? '#111827' : '#6b7280', flex: 1 }}>{ing.name}</span>
+                {!ing.have && <span style={{ fontSize: '0.75rem', color: '#d97706', background: '#fef9c3', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>need</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {recipe.steps.map((step, i) => (
+              <li key={i} style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5' }}>{step}</li>
+            ))}
+          </ol>
         )}
-      </section>
+
+        {/* Cook Together */}
+        <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: '600' }}>Cook Together</h2>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Pick who's joining and let AI check allergies, pantries, and split the cost.</p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {MOCK_FRIENDS.map(f => (
+              <label key={f.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                <input type="checkbox" checked={selectedFriends.includes(f.name)} onChange={() => toggleFriend(f.name)} />
+                <span>{f.avatar} {f.name}</span>
+                <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>— {f.taste}</span>
+              </label>
+            ))}
+          </div>
+
+          <button
+            onClick={startCookTogether}
+            disabled={agentRunning || selectedFriends.length === 0}
+            style={{ padding: '0.75rem', background: '#2F6B4F', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', opacity: selectedFriends.length === 0 ? 0.5 : 1 }}
+          >
+            {agentRunning ? 'Planning…' : 'Start AI planning'}
+          </button>
+
+          {agentLogs.length > 0 && (
+            <pre style={{ margin: 0, background: '#111827', color: '#4ade80', padding: '0.75rem', borderRadius: '8px', fontSize: '0.8rem', lineHeight: '1.6', overflowX: 'auto' }}>
+              {agentLogs.join('\n')}{agentRunning ? '\n▊' : ''}
+            </pre>
+          )}
+        </section>
+
+      </div>
     </div>
   )
 }
