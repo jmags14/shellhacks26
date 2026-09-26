@@ -119,7 +119,7 @@ export default function LoginPage() {
         <p style={{ margin: 0, fontSize: '2.5rem', fontWeight: '800', color: '#3D2B1F', letterSpacing: '0.1em', fontFamily: 'Bebas Neue, sans-serif' }}>
           WELCOME
         </p>
-        <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', fontWeight: '600', fontStyle: 'italic', color: '#fff' }}>
+        <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', fontWeight: '600', fontStyle: 'italic', color: '#3D2B1F' }}>
           Your FYP is now your meal plan.<br />Scroll, save, and cook with friends.
         </p>
       </div>
