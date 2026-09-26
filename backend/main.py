@@ -49,12 +49,14 @@ def import_recipe(request: ImportRequest):
     caption = metadata.get("description", "")
 
     extracted = extract_recipe(caption)
+    verification = verify_recipe(caption, extracted)
 
     return {
         "success": True,
         "video_path": output_path,
         "caption": caption,
-        "extracted_recipe": extracted
+        "extracted_recipe": extracted,
+        "verification": verification
     }
 
 def extract_recipe(caption: str):
@@ -80,6 +82,45 @@ Caption:
     text = response.text.strip()
 
     # Remove markdown code fences if Gemini added them
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+
+    return json.loads(text.strip())
+
+def verify_recipe(caption: str, extracted: dict):
+    prompt = f"""
+You are checking a recipe extraction for accuracy against its source caption.
+
+Source caption:
+{caption}
+
+Extracted recipe (JSON):
+{json.dumps(extracted)}
+
+Check every ingredient and step against the source caption.
+Flag anything that was invented, guessed, or not clearly stated in the caption
+(e.g. an amount that wasn't specified, a step that was inferred rather than stated).
+
+Return ONLY valid JSON with this exact shape, no other text:
+
+{{
+  "flags": [
+    {{"field": "string describing what's flagged", "reason": "string"}}
+  ],
+  "verified": true or false
+}}
+
+If nothing is questionable, return "flags": [] and "verified": true.
+"""
+
+    response = client.models.generate_content(
+        model="gemini-3.8-flash",
+        contents=prompt
+    )
+
+    text = response.text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
         if text.startswith("json"):
