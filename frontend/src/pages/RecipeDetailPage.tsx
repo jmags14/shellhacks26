@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { api, type Friend, type RecipeDetail } from '../lib/api'
+import { getRecipe, listFriends, type Friend, type RecipeSummary } from '../lib/api'
 
 export default function RecipeDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useUser()
-  const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
+  const [recipe, setRecipe] = useState<RecipeSummary | null>(null)
   const [loadError, setLoadError] = useState('')
   const [friends, setFriends] = useState<Friend[]>([])
 
@@ -20,15 +20,15 @@ export default function RecipeDetailPage() {
 
   useEffect(() => {
     if (!user) return
-    api.listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
+    listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
   }, [user])
 
   useEffect(() => {
     if (!user || !id) return
-    api.getRecipe(id, user.id)
+    getRecipe(id)
       .then(res => {
-        if (res.success && res.recipe) setRecipe(res.recipe)
-        else setLoadError(res.error ?? 'Recipe not found.')
+        if (res) setRecipe(res)
+        else setLoadError('Recipe not found.')
       })
       .catch(() => setLoadError('Could not load recipe.'))
   }, [user, id])
@@ -69,6 +69,8 @@ export default function RecipeDetailPage() {
     borderLeft: t === 'ingredients' ? '1px solid #d1d5db' : 'none',
     borderRight: t === 'steps' ? '1px solid #d1d5db' : 'none',
   })
+
+  console.log('ingredients:', recipe?.ingredients)
 
   if (!recipe) {
     return (
@@ -122,7 +124,7 @@ export default function RecipeDetailPage() {
           </ul>
         ) : (
           <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {recipe.steps.map((step, i) => (
+            {recipe.steps?.map((step, i) => (
               <li key={i} style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5' }}>{step}</li>
             ))}
           </ol>
@@ -139,8 +141,8 @@ export default function RecipeDetailPage() {
             {friends.length === 0 && <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No friends yet.</span>}
             {friends.map(f => (
               <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                <input type="checkbox" checked={selectedFriends.includes(f.username)} onChange={() => toggleFriend(f.username)} />
-                <span>{f.username}</span>
+                <input type="checkbox" checked={selectedFriends.includes(f.name)} onChange={() => toggleFriend(f.name)} />
+                <span>{f.name}</span>
                 {f.taste && <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>— {f.taste}</span>}
               </label>
             ))}
