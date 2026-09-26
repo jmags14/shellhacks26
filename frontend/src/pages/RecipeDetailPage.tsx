@@ -43,7 +43,7 @@ export default function RecipeDetailPage() {
 
   const tabBtn = (t: 'ingredients' | 'steps') => ({
     flex: 1, padding: '0.6rem', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
-    background: tab === t ? '#2F6B4F' : '#fff',
+    background: tab === t ? '#FAAED2' : '#fff',
     color: tab === t ? '#fff' : '#6b7280',
     borderRadius: t === 'ingredients' ? '8px 0 0 8px' : '0 8px 8px 0',
     borderTop: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db',
@@ -58,7 +58,7 @@ export default function RecipeDetailPage() {
         {/* Nav */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.9rem', padding: 0 }}>← Back</button>
-          <a href={recipe.source_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.85rem', color: '#2F6B4F', fontWeight: '500' }}>View original</a>
+          <a href={recipe.source_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.85rem', color: '#FAAED2', fontWeight: '500' }}>View original</a>
         </div>
 
         {/* Title */}
@@ -73,10 +73,10 @@ export default function RecipeDetailPage() {
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
             <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>You have {haveCount}/{recipe.ingredients.length} ingredients</span>
-            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#2F6B4F' }}>${recipe.cost_to_finish.toFixed(2)} to finish</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#F8CE5B' }}>${recipe.cost_to_finish.toFixed(2)} to finish</span>
           </div>
           <div style={{ height: '6px', background: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${(haveCount / recipe.ingredients.length) * 100}%`, background: '#2F6B4F', borderRadius: '999px' }} />
+            <div style={{ height: '100%', width: `${(haveCount / recipe.ingredients.length) * 100}%`, background: '#F8CE5B', borderRadius: '999px' }} />
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export default function RecipeDetailPage() {
           <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {recipe.ingredients.map(ing => (
               <li key={ing.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0', borderBottom: '1px solid #f3f4f6' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ing.have ? '#dcfce7' : '#f3f4f6', color: ing.have ? '#2F6B4F' : '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0 }}>
+                <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ing.have ? '#fce7f3' : '#f3f4f6', color: ing.have ? '#FAAED2' : '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0 }}>
                   {ing.have ? '✓' : '○'}
                 </span>
                 <span style={{ fontSize: '0.9rem', color: ing.have ? '#111827' : '#6b7280', flex: 1 }}>{ing.name}</span>
@@ -126,7 +126,7 @@ export default function RecipeDetailPage() {
           <button
             onClick={startCookTogether}
             disabled={agentRunning || selectedFriends.length === 0}
-            style={{ padding: '0.75rem', background: '#2F6B4F', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', opacity: selectedFriends.length === 0 ? 0.5 : 1 }}
+            style={{ padding: '0.75rem', background: '#FAAED2', color: '#3D2B1F', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', opacity: selectedFriends.length === 0 ? 0.5 : 1 }}
           >
             {agentRunning ? 'Planning…' : 'Start AI planning'}
           </button>
