@@ -18,6 +18,9 @@ based on typical prices at common US grocery stores (Walmart, Publix, etc.)
 in 2026. Assume the person needs to BUY whole packages/units (e.g. a whole
 bag of rice, a whole bottle of soy sauce), not just the amount used in the
 recipe, since that's what it actually costs to acquire.
+Cost is based total amount someone will need to buy, not just the amount used in the recipe (Bag of rice, bottle of soy sauce, etc.).
+If the recipe calls for a spice or condiment that is typically sold in a small bottle or jar, assume the person will need to buy 
+the whole bottle/jar, even if the recipe only uses a small amount.
 
 Ingredients:
 {ingredient_lines}

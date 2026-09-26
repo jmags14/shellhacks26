@@ -24,8 +24,8 @@ For quantities and units:
 - If no amount is stated but you can visually judge a reasonable approximate amount
   (e.g. portion size, container fill level, count of whole items like onions or chicken breasts),
   provide your best estimate and set "estimated": true.
-- Only leave quantity/unit as null if there is truly no way to approximate it (e.g. a
-  spice shaken briefly with no visible amount).
+# - Only leave quantity/unit as null if there is truly no way to approximate it (e.g. a
+#   spice shaken briefly with no visible amount).
 
 Return ONLY valid JSON with this exact shape, no other text:
 
