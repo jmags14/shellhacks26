@@ -1,0 +1,23 @@
+# Backend dependencies. Install with:
+#   pip install -r backend/requirements.txt
+# Only direct dependencies are listed; pip resolves the rest.
+
+# API server
+fastapi==0.141.1
+uvicorn==0.54.0
+pydantic==2.13.5
+
+# Database (Postgres / Tiger Data)
+psycopg[binary]==3.3.6
+python-dotenv==1.2.3
+
+# Gemini / agents
+google-genai==2.25.0
+google-adk==2.10.0
+
+# Recipe import: main.py shells out to the `yt-dlp` command.
+# Unpinned on purpose, it needs frequent updates to keep up with Instagram/TikTok.
+yt-dlp
+
+# Supabase JWT verification (for the upcoming backend auth)
+PyJWT==2.15.0
