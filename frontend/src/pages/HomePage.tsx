@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useUser } from '../lib/auth'
 import { api, type Friend, type RecipeSummary } from '../lib/api'
 
@@ -71,9 +71,9 @@ export default function HomePage() {
             {friends.map(f => (
               <div key={f.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
-                  {f.username.charAt(0).toUpperCase()}
+                  {f.name.charAt(0).toUpperCase()}
                 </div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{f.username}</span>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{f.name}</span>
               </div>
             ))}
           </div>
@@ -99,21 +99,23 @@ export default function HomePage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filtered.map(recipe => (
-                <button
+                <Link
                   key={recipe.id}
-                  onClick={() => navigate(`/recipe/${recipe.id}`)}
-                  style={{ textAlign: 'left', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', cursor: 'pointer', width: '100%' }}
+                  to={`/recipe/${recipe.id}`}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                    <div>
-                      <p style={{ margin: '0 0 0.25rem', fontWeight: '600', fontSize: '0.95rem', color: '#111827' }}>{recipe.title}</p>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
-                        {[recipe.cuisine, recipe.time_minutes && `${recipe.time_minutes} min`].filter(Boolean).join(' · ') || recipe.source}
-                      </p>
+                  <div style={{ textAlign: 'left', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', cursor: 'pointer', width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                      <div>
+                        <p style={{ margin: '0 0 0.25rem', fontWeight: '600', fontSize: '0.95rem', color: '#111827' }}>{recipe.title}</p>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
+                          {[recipe.cuisine, recipe.time_minutes && `${recipe.time_minutes} min`].filter(Boolean).join(' · ') || recipe.source}
+                        </p>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280', flexShrink: 0 }}>{recipe.ingredient_count} ingredients</p>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280', flexShrink: 0 }}>{recipe.ingredient_count} ingredients</p>
                   </div>
-                </button>
+                </Link>
               ))}
             </div>
           )}
