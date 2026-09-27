@@ -258,7 +258,21 @@ export default function RecipeDetailPage() {
 
         {/* Rating */}
         <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#6b7280' }}>Rate this recipe</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#6b7280' }}>Rate this recipe</span>
+            {locked && (
+              <button
+                onClick={() => {
+                  try { localStorage.removeItem(`ratings_${id}`) } catch {}
+                  setLocked(false)
+                  setSaveState('idle')
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#9ca3af', padding: 0 }}
+              >
+                ✏️ Edit
+              </button>
+            )}
+          </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {[['😍', 'I love it'], ['👍', 'Like it'], ['👎', 'Hate it']].map(([emoji, label]) => (
