@@ -46,6 +46,7 @@ export default function RecipeDetailPage() {
   const [rating, setRating] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [locked, setLocked] = useState(false)
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
@@ -65,6 +66,17 @@ export default function RecipeDetailPage() {
   // Restore your rating/note for this recipe, if you've left any before.
   useEffect(() => {
     if (!user || !id) return
+    // Check for a locked (submitted) rating first.
+    try {
+      const saved = localStorage.getItem(`ratings_${id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved) as { rating: string; note: string }
+        setRating(parsed.rating)
+        setNote(parsed.note)
+        setLocked(true)
+        return
+      }
+    } catch {}
     const draft = loadDraft(user.id, id)
     if (draft) {
       setRating(draft.rating)
@@ -113,13 +125,23 @@ export default function RecipeDetailPage() {
     }
   }
 
+  const RATING_EMOJIS: Record<string, string> = { 'I love it': '😍', 'Like it': '👍', 'Hate it': '👎' }
+
   async function handleSave() {
     if (!user || !id) return
     setSaveState('saving')
     try {
       await api.saveRecipe(id, user.id)
       if (rating) await api.rateRecipe(id, user.id, RATING_VALUES[rating])
+      try {
+        localStorage.setItem(`ratings_${id}`, JSON.stringify({
+          rating,
+          emoji: rating ? (RATING_EMOJIS[rating] ?? '') : '',
+          note,
+        }))
+      } catch {}
       setSaveState('saved')
+      setLocked(true)
     } catch {
       setSaveState('error')
     }
@@ -243,6 +265,7 @@ export default function RecipeDetailPage() {
               <button
                 key={label}
                 onClick={() => {
+                  if (locked) return
                   setRating(label)
                   setSaveState('idle')
                   if (user && id) saveDraft(user.id, id, { rating: label, note })
@@ -252,7 +275,10 @@ export default function RecipeDetailPage() {
                   background: rating === label ? '#FAAED2' : '#fff',
                   color: rating === label ? '#3D2B1F' : '#374151',
                   border: `${rating === label ? '2px solid #e8a0c0' : '1px solid #d1d5db'}`,
-                  borderRadius: '999px', fontSize: '0.8rem', fontWeight: '500', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                  borderRadius: '999px', fontSize: '0.8rem', fontWeight: '500',
+                  cursor: locked ? 'default' : 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                  opacity: locked && rating !== label ? 0.4 : 1,
                 }}
               >
                 {emoji} {label}
@@ -263,23 +289,29 @@ export default function RecipeDetailPage() {
           <textarea
             placeholder="Add a note..."
             value={note}
+            readOnly={locked}
             onChange={e => {
+              if (locked) return
               setNote(e.target.value)
               if (user && id) saveDraft(user.id, id, { rating, note: e.target.value })
             }}
             rows={3}
-            style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.85rem', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.85rem', resize: 'none', outline: 'none', fontFamily: 'inherit', background: locked ? '#f9fafb' : '#fff', color: locked ? '#6b7280' : 'inherit' }}
           />
 
-          <button
-            onClick={handleSave}
-            disabled={saveState === 'saving'}
-            style={{ width: '100%', padding: '0.7rem', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: saveState === 'saving' ? 'default' : 'pointer', opacity: saveState === 'saving' ? 0.7 : 1 }}
-          >
-            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved ✓' : 'Save'}
-          </button>
-          {saveState === 'error' && (
-            <p role="alert" style={{ margin: 0, color: '#ef4444', fontSize: '0.8rem' }}>Couldn't save. Try again.</p>
+          {!locked && (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saveState === 'saving'}
+                style={{ width: '100%', padding: '0.7rem', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: saveState === 'saving' ? 'default' : 'pointer', opacity: saveState === 'saving' ? 0.7 : 1 }}
+              >
+                {saveState === 'saving' ? 'Saving…' : 'Save'}
+              </button>
+              {saveState === 'error' && (
+                <p role="alert" style={{ margin: 0, color: '#ef4444', fontSize: '0.8rem' }}>Couldn't save. Try again.</p>
+              )}
+            </>
           )}
         </section>
 
