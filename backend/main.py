@@ -19,6 +19,9 @@ from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
 
 app = FastAPI()
 
+from api.recommendations import router as recommendations_router
+app.include_router(recommendations_router)
+
 # Cook Together runs with mock agents (0 Gemini requests) unless the root .env
 # sets USE_MOCK_AGENTS=false. Flip that one line to turn the real agents on.
 USE_MOCK_AGENTS = os.getenv("USE_MOCK_AGENTS", "true").strip().lower() != "false"

@@ -100,6 +100,25 @@ export interface CookTogetherResult {
   }[]
 }
 
+export interface Recommendation {
+  recipe_id: string
+  title: string
+  match_score: number // 0-100
+  cuisine: string | null
+  time_minutes: number | null
+  ingredient_count: number
+  discovery: boolean // true = a recipe the user hasn't saved or cooked yet
+  reason: string
+  reason_source: 'deterministic' | 'personal_agent'
+}
+
+export interface RecommendationsResult {
+  status: 'ok' | 'cold_start' | 'limited_candidates' | 'no_eligible_candidates'
+  agent_used: boolean
+  agent_status?: 'unavailable'
+  recommendations: Recommendation[]
+}
+
 export async function listFriends(userId: string): Promise<{ friends: Friend[] }> {
   if (USE_SEEDED_DATA) return { friends: SEEDED_FRIENDS }
 
@@ -155,6 +174,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ url, user_id: userId }),
     }),
+
+  // useAgent=true spends one Gemini request; the default is free and deterministic.
+  // exclude: recipe IDs to skip, so a reroll doesn't repeat what was already shown.
+  getRecommendations: (userId: string, useAgent = false, exclude: string[] = []) => {
+    const params = new URLSearchParams()
+    if (useAgent) params.set('use_agent', 'true')
+    exclude.forEach(id => params.append('exclude', id))
+    const qs = params.toString()
+    return request<RecommendationsResult>(`/recommendations/${userId}${qs ? `?${qs}` : ''}`)
+  },
 
   cookTogether: (userIds: string[], intent?: string) =>
     request<CookTogetherResult>('/cook-together', {
