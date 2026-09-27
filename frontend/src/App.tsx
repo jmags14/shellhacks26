@@ -7,6 +7,7 @@ import CookTogetherPage from './pages/CookTogetherPage'
 import RecommendedPage from './pages/RecommendedPage'
 import ProfilePage from './pages/ProfilePage'
 import FriendsPage from './pages/FriendsPage'
+import FoodPreferencesPage from './pages/FoodPreferencesPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
         } />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/friends" element={<FriendsPage />} />
+        <Route path="/profile/preferences" element={<FoodPreferencesPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
