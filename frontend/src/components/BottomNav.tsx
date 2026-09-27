@@ -9,6 +9,7 @@ export default function BottomNav() {
     { path: '/', label: 'Home', emoji: '🏠' },
     { path: '/cook-together', label: 'Cook Together', emoji: '🍳' },
     { path: '/recommended', label: 'For You', emoji: '✨' },
+    { path: '/profile', label: 'You', emoji: '👤' },
   ]
 
   return (

@@ -27,8 +27,8 @@ export default function HomePage() {
     if (!user) return
     api.listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
     api.listRecipes(user.id)
-      .then(res => setRecipes(res.recipes))
-      .catch(() => setRecipesError('Could not load recipes.'))
+      .then(res => { console.log('recipes result:', res); setRecipes(res.recipes) })
+      .catch(err => { console.error('recipes error:', err); setRecipesError('Could not load recipes.') })
       .finally(() => setRecipesLoading(false))
     // Refetch when a background import finishes so the new recipe appears.
   }, [user, doneImports])
