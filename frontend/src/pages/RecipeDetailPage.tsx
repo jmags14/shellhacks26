@@ -15,6 +15,7 @@ export default function RecipeDetailPage() {
   const [note, setNote] = useState('')
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [speed, setSpeed] = useState(1)
 
   useEffect(() => {
     if (!user || !id) return
@@ -43,10 +44,15 @@ export default function RecipeDetailPage() {
     const url = URL.createObjectURL(blob)
     const newAudio = new Audio(url)
     newAudio.onended = () => setIsPlaying(false)
+    newAudio.playbackRate = speed
     setAudio(newAudio)
     newAudio.play()
     setIsPlaying(true)
   }
+
+  useEffect(() => {
+    if (audio) audio.playbackRate = speed
+  }, [speed, audio])
 
   const tabBtn = (t: 'ingredients' | 'steps') => ({
     flex: 1, padding: '0.6rem', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
@@ -114,6 +120,13 @@ export default function RecipeDetailPage() {
             style={{ width: '100%', padding: '14px', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
             {isPlaying ? '⏸ Pause' : '▶ Play Instructions'}
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '20px' }}>🐢</span>
+            <input type="range" min="0.5" max="2" step="0.25" value={speed}
+              onChange={e => setSpeed(parseFloat(e.target.value))}
+              style={{ flex: 1, accentColor: '#F8CE5B' }} />
+            <span style={{ fontSize: '20px' }}>🐇</span>
+          </div>
           <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {recipe.steps?.map((step, i) => (
               <li key={i} style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5' }}>{step}</li>
