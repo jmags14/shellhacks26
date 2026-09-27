@@ -5,6 +5,8 @@ import SharePage from './pages/SharePage'
 import RecipeDetailPage from './pages/RecipeDetailPage'
 import CookTogetherPage from './pages/CookTogetherPage'
 import RecommendedPage from './pages/RecommendedPage'
+import ProfilePage from './pages/ProfilePage'
+import FriendsPage from './pages/FriendsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -28,6 +30,8 @@ function App() {
         <Route path="/recommended" element={
           <ProtectedRoute><RecommendedPage /></ProtectedRoute>
         } />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/friends" element={<FriendsPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
