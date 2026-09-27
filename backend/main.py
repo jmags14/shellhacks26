@@ -16,6 +16,7 @@ from agents.import_recipe.price_agent import estimate_recipe_price
 from services.recipe_service import list_recipes_for_user
 from services.friend_service import list_friends
 from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
+from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe, rate_recipe
 
 app = FastAPI()
 
@@ -259,3 +260,13 @@ def narrate_recipe_route(recipe_id: str, user_id: str, step: int = None):
     audio_bytes = narrate_recipe(recipe["title"], recipe["steps"]) if step is None else narrate_step(text)
 
     return Response(content=audio_bytes, media_type="audio/mpeg")
+
+class RateRequest(BaseModel):
+    user_id: str
+    rating: int  # 5 = love it, 3 = like it, 1 = hate it
+
+@app.post("/recipes/{recipe_id}/rate")
+def rate_recipe_route(recipe_id: str, request: RateRequest):
+    if request.rating not in (1, 3, 5):
+        return {"success": False, "error": "Rating must be 1, 3, or 5"}
+    return rate_recipe(recipe_id, request.user_id, request.rating)

@@ -198,3 +198,21 @@ def delete_recipe(recipe_id: str, owner_id: str):
     conn.close()
 
     return {"success": True}
+
+def rate_recipe(recipe_id: str, user_id: str, rating: int):
+    conn = psycopg.connect(os.getenv("DATABASE_URL"))
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO recipe_history (user_id, recipe_id, rating)
+        VALUES (%s, %s, %s)
+        """,
+        (user_id, recipe_id, rating)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {"success": True}
