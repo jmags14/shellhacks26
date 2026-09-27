@@ -147,7 +147,7 @@ export default function CookTogetherPage() {
     setResult(null)
     try {
       // You are always part of the group, plus whichever friends you picked.
-      const res = await api.cookTogether([user.id], mealType ?? undefined)
+      const res = await api.cookTogether([user.id, ...selected], mealType ?? undefined)
       setResult(res)
       setLines(buildLines(res))
       setVisibleLines(0)
