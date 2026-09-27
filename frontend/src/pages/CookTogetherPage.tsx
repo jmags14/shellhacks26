@@ -87,8 +87,7 @@ export default function CookTogetherPage() {
   const navigate = useNavigate()
   const { user } = useUser()
   const [saved] = useState(() => loadSaved(user?.id))
-  const [friends, setFriends] = useState<Friend[]>([])
-  const [friendsLoading, setFriendsLoading] = useState(true)
+  const [friends, setFriends] = useState<{id: string, name: string, emoji: string}[]>([])
   const [selected, setSelected] = useState<string[]>(saved?.selected ?? [])
   const [mealType, setMealType] = useState<string | null>(saved?.mealType ?? null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(saved?.result ? 'done' : 'idle')
@@ -105,14 +104,23 @@ export default function CookTogetherPage() {
     saveSearch(user.id, selected.length || mealType || result ? { selected, mealType, result } : null)
   }, [user, selected, mealType, result])
 
-  // Only the logged-in user's own friends.
   useEffect(() => {
-    if (!user) return
-    listFriends(user.id)
-      .then(res => setFriends(res.friends))
-      .catch(() => {})
-      .finally(() => setFriendsLoading(false))
-  }, [user])
+    const ALL_FRIENDS = [
+      { id: '1', name: 'Maya', emoji: '🐱' },
+      { id: '2', name: 'Jordan', emoji: '🐼' },
+      { id: '3', name: 'Priya', emoji: '🦊' },
+      { id: '4', name: 'Carlos', emoji: '🐨' },
+      { id: '5', name: 'Lily', emoji: '🐰' },
+      { id: '6', name: 'Sam', emoji: '🐸' },
+      { id: '7', name: 'Ava', emoji: '🦋' },
+    ]
+    try {
+      const addedIds: string[] = JSON.parse(localStorage.getItem('friends') || '[]')
+      setFriends(ALL_FRIENDS.filter(f => addedIds.includes(f.id)))
+    } catch {
+      setFriends([])
+    }
+  }, [])
 
   // Reveal the agent log one line at a time.
   useEffect(() => {
@@ -132,7 +140,7 @@ export default function CookTogetherPage() {
     setResult(null)
     try {
       // You are always part of the group, plus whichever friends you picked.
-      const res = await api.cookTogether([user.id, ...selected], mealType ?? undefined)
+      const res = await api.cookTogether([user.id], mealType ?? undefined)
       setResult(res)
       setLines(buildLines(res))
       setVisibleLines(0)
@@ -163,7 +171,7 @@ export default function CookTogetherPage() {
       <p style={{ color: '#888', fontSize: '13px', margin: '0 0 24px' }}>Pick your crew and let AI find the perfect recipe for everyone</p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '32px' }}>
-        {!friendsLoading && friends.length === 0 && (
+        {friends.length === 0 && (
           <span style={{ fontSize: '13px', color: '#888' }}>You don't have any friends added yet.</span>
         )}
         {friends.map(f => (
