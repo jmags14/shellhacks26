@@ -1,4 +1,4 @@
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
@@ -7,7 +7,7 @@ import os
 import uuid
 from uuid import UUID
 import json
-from agents.cook_together.workflow import cook_together
+from agents.cook_together.workflow import run_cook_together
 from agents.import_recipe.extractor_agent import extract_recipe
 from agents.import_recipe.verifier_agent import verify_recipe
 from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe
@@ -18,6 +18,10 @@ from services.friend_service import list_friends
 from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
 
 app = FastAPI()
+
+# Cook Together runs with mock agents (0 Gemini requests) unless the root .env
+# sets USE_MOCK_AGENTS=false. Flip that one line to turn the real agents on.
+USE_MOCK_AGENTS = os.getenv("USE_MOCK_AGENTS", "true").strip().lower() != "false"
 
 # Allow the Vite dev server (localhost or a LAN IP, e.g. testing on a phone)
 # to call the API directly. The Vite proxy in vite.config.ts avoids CORS too.
@@ -47,20 +51,28 @@ class ImportRequest(BaseModel):
 async def create_cook_together(
     request: CookTogetherRequest,
 ):
-    result = await cook_together(
-        user_ids=request.user_ids,
-        intent=request.intent,
+    try:
+        planner, personal_outputs, candidates = await run_cook_together(
+            user_ids=request.user_ids,
+            intent=request.intent,
+            use_mock_agents=USE_MOCK_AGENTS,
+        )
+    except ValueError as e:
+        # e.g. a user that isn't in the users table, or no candidate recipes
+        raise HTTPException(status_code=400, detail=str(e))
 
-        # ==============================================
-        # MOCK MODE — 0 GEMINI REQUESTS
-        #
-        # FINAL REAL GEMINI VERSION:
-        # Change True -> False
-        # ==============================================
-        use_mock_agents=True,
-    )
+    titles = {c.recipe_id: c.title for c in candidates}
 
-    return result
+    return {
+        "mock": USE_MOCK_AGENTS,
+        "top_pick": planner.top_pick,
+        "conflicts_resolved": planner.conflicts_resolved,
+        "ranking": [
+            {**r.model_dump(), "title": titles.get(r.recipe_id, "Unknown recipe")}
+            for r in planner.ranking
+        ],
+        "agents": [p.model_dump() for p in personal_outputs],
+    }
 
 def run_import(url: str, user_id: str) -> dict:
     os.makedirs("downloads", exist_ok=True)

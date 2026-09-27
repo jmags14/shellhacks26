@@ -2,6 +2,7 @@ import asyncio
 from uuid import UUID
 
 from agents.cook_together.schemas import (
+    CandidateRecipe,
     PersonalAgentOutput,
     PlannerOutput,
     RankedRecipe,
@@ -12,11 +13,11 @@ from services.candidate_service import get_group_candidates
 from services.user_context_service import get_user_context
 
 
-async def cook_together(
+async def run_cook_together(
     user_ids: list[UUID],
     intent: str | None = None,
     use_mock_agents: bool = True,
-) -> PlannerOutput:
+) -> tuple[PlannerOutput, list[PersonalAgentOutput], list[CandidateRecipe]]:
     """
     Complete Cook Together workflow.
 
@@ -153,6 +154,25 @@ async def cook_together(
             candidates,
         )
 
+
+    return planner_output, list(personal_outputs), candidates
+
+
+async def cook_together(
+    user_ids: list[UUID],
+    intent: str | None = None,
+    use_mock_agents: bool = True,
+) -> PlannerOutput:
+    """
+    Same workflow as run_cook_together, but returns only the Planner's
+    final ranking. Kept for the tests/scripts that already call it.
+    """
+
+    planner_output, _, _ = await run_cook_together(
+        user_ids,
+        intent,
+        use_mock_agents,
+    )
 
     return planner_output
 

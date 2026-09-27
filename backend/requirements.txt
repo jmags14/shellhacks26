@@ -15,6 +15,9 @@ python-dotenv==1.2.3
 google-genai==2.25.0
 google-adk==2.10.0
 
+# Recipe narration (text-to-speech). Needs ELEVENLABS_API_KEY in the root .env.
+elevenlabs
+
 # Recipe import: main.py shells out to the `yt-dlp` command.
 # Unpinned on purpose, it needs frequent updates to keep up with Instagram/TikTok.
 yt-dlp

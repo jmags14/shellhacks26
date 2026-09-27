@@ -81,6 +81,25 @@ function emojiFor(id: string): string {
   return FRIEND_EMOJIS[sum % FRIEND_EMOJIS.length]
 }
 
+export interface CookTogetherResult {
+  mock: boolean // true while the backend runs with Gemini disabled
+  top_pick: string
+  conflicts_resolved: string[]
+  ranking: { recipe_id: string; title: string; group_score: number; why: string[]; conflicts: string[] }[]
+  agents: {
+    user_id: string
+    user_name: string
+    evaluations: {
+      recipe_id: string
+      fit_score: number
+      dealbreakers: string[]
+      reasons: string[]
+      can_bring: string[]
+      missing: string[]
+    }[]
+  }[]
+}
+
 export async function listFriends(userId: string): Promise<{ friends: Friend[] }> {
   if (USE_SEEDED_DATA) return { friends: SEEDED_FRIENDS }
 
@@ -138,7 +157,7 @@ export const api = {
     }),
 
   cookTogether: (userIds: string[], intent?: string) =>
-    request<unknown>('/cook-together', {
+    request<CookTogetherResult>('/cook-together', {
       method: 'POST',
       body: JSON.stringify({ user_ids: userIds, intent }),
     }),

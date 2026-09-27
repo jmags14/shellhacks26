@@ -1,60 +1,143 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
+import { useUser } from '../lib/auth'
+import { api, listFriends, type CookTogetherResult, type Friend } from '../lib/api'
 
-const MOCK_FRIENDS = [
-  { id: 'f1', name: 'Maya', emoji: '🐱' },
-  { id: 'f2', name: 'Jordan', emoji: '🐼' },
-  { id: 'f3', name: 'Priya', emoji: '🦊' },
-  { id: 'f4', name: 'Carlos', emoji: '🐨' },
-  { id: 'f5', name: 'Lily', emoji: '🐰' },
-]
+const cap = (name: string) => name.charAt(0).toUpperCase() + name.slice(1)
 
-const AGENT_LINES = [
-  'Starting Personal Agents for each friend...',
-  "Maya's agent: no allergy conflicts found ✓",
-  "Jordan's agent: checking pantry items...",
-  "Priya's agent: no cilantro in this recipe ✓",
-  "Carlos's agent: scoring recipe for the group...",
-  'Group score: 92/100 — great match! 🎉',
-  'Cost split: ~$3.50 per person',
-  'Done! Everyone can eat this. ✓',
-]
+// Remember the last search so leaving the page (e.g. to open a recipe) doesn't lose it.
+interface SavedSearch {
+  selected: string[]
+  mealType: string | null
+  result: CookTogetherResult | null
+}
 
-const RESULT_RECIPES = [
-  { id: '1', title: 'Spicy Tteokbokki' },
-  { id: '2', title: 'Mango Sticky Rice' },
-  { id: '3', title: 'Birria Tacos' },
-]
+const storageKey = (userId: string) => `cook-together:${userId}`
+
+function loadSaved(userId: string | undefined): SavedSearch | null {
+  if (!userId) return null
+  try {
+    return JSON.parse(sessionStorage.getItem(storageKey(userId)) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+function saveSearch(userId: string, search: SavedSearch | null) {
+  try {
+    if (search) sessionStorage.setItem(storageKey(userId), JSON.stringify(search))
+    else sessionStorage.removeItem(storageKey(userId))
+  } catch {
+    // storage unavailable: the page still works, it just won't remember
+  }
+}
+
+// Turn the backend's real result into the lines shown in the "agent log" box.
+function buildLines(res: CookTogetherResult): string[] {
+  const titleOf = (id: string) => res.ranking.find(r => r.recipe_id === id)?.title ?? 'a recipe'
+  const lines = [`Starting Personal Agents for ${res.agents.length} ${res.agents.length === 1 ? 'person' : 'people'}...`]
+
+  for (const agent of res.agents) {
+    const best = [...agent.evaluations].sort((a, b) => b.fit_score - a.fit_score)[0]
+    const blocked = agent.evaluations.filter(e => e.dealbreakers.length > 0).length
+    const scored = `scored ${agent.evaluations.length} recipes`
+    const fav = best ? `, favorite: ${titleOf(best.recipe_id)} (${best.fit_score}/10)` : ''
+    lines.push(`${cap(agent.user_name)}'s agent: ${scored}${fav}${blocked ? `, ${blocked} with dealbreakers ⚠️` : ' ✓'}`)
+  }
+
+  lines.push(`Planner: ranked ${res.ranking.length} recipes for the group...`)
+  const top = res.ranking.find(r => r.recipe_id === res.top_pick)
+  if (top) lines.push(`Top pick: ${top.title} — group score ${top.group_score}/10 🎉`)
+  if (res.mock) lines.push('(Mock mode: Gemini is off, scores are placeholders)')
+  return lines
+}
+
+// The backend answers errors as {"detail": "..."}.
+function errorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : ''
+  try {
+    const detail = JSON.parse(raw).detail
+    if (typeof detail === 'string') return detail
+  } catch {
+    // not JSON
+  }
+  return 'Something went wrong. Please try again.'
+}
 
 export default function CookTogetherPage() {
   const navigate = useNavigate()
-  const [selected, setSelected] = useState<string[]>([])
-  const [mealType, setMealType] = useState<string | null>(null)
-  const [running, setRunning] = useState(false)
-  const [visibleLines, setVisibleLines] = useState(0)
+  const { user } = useUser()
+  const [saved] = useState(() => loadSaved(user?.id))
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [friendsLoading, setFriendsLoading] = useState(true)
+  const [selected, setSelected] = useState<string[]>(saved?.selected ?? [])
+  const [mealType, setMealType] = useState<string | null>(saved?.mealType ?? null)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(saved?.result ? 'done' : 'idle')
+  const [result, setResult] = useState<CookTogetherResult | null>(saved?.result ?? null)
+  const [lines, setLines] = useState<string[]>(() => (saved?.result ? buildLines(saved.result) : []))
+  // A restored result shows immediately instead of replaying the animation.
+  const [visibleLines, setVisibleLines] = useState(() => (saved?.result ? buildLines(saved.result).length : 0))
+  const [error, setError] = useState('')
+  const [openWhy, setOpenWhy] = useState<string | null>(null)
+
+  // Persist the search whenever it changes.
+  useEffect(() => {
+    if (!user) return
+    saveSearch(user.id, selected.length || mealType || result ? { selected, mealType, result } : null)
+  }, [user, selected, mealType, result])
+
+  // Only the logged-in user's own friends.
+  useEffect(() => {
+    if (!user) return
+    listFriends(user.id)
+      .then(res => setFriends(res.friends))
+      .catch(() => {})
+      .finally(() => setFriendsLoading(false))
+  }, [user])
+
+  // Reveal the agent log one line at a time.
+  useEffect(() => {
+    if (status !== 'done' || visibleLines >= lines.length) return
+    const timer = setTimeout(() => setVisibleLines(v => v + 1), 600)
+    return () => clearTimeout(timer)
+  }, [status, visibleLines, lines])
 
   const toggle = (id: string) => setSelected(prev =>
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   )
 
-  const start = () => {
-    setRunning(true)
-    setVisibleLines(0)
+  async function start() {
+    if (!user) return
+    setStatus('loading')
+    setError('')
+    setResult(null)
+    try {
+      // You are always part of the group, plus whichever friends you picked.
+      const res = await api.cookTogether([user.id, ...selected], mealType ?? undefined)
+      setResult(res)
+      setLines(buildLines(res))
+      setVisibleLines(0)
+      setStatus('done')
+    } catch (err) {
+      setError(errorMessage(err))
+      setStatus('error')
+    }
   }
 
-  useEffect(() => {
-    if (!running || visibleLines >= AGENT_LINES.length) return
-    const timer = setInterval(() => {
-      setVisibleLines(prev => {
-        if (prev + 1 >= AGENT_LINES.length) clearInterval(timer)
-        return prev + 1
-      })
-    }, 600)
-    return () => clearInterval(timer)
-  }, [running])
+  function reset() {
+    setSelected([])
+    setMealType(null)
+    setStatus('idle')
+    setResult(null)
+    setLines([])
+    setVisibleLines(0)
+    setError('')
+    setOpenWhy(null)
+  }
 
-  const done = visibleLines >= AGENT_LINES.length
+  const disabled = selected.length === 0 || !mealType || status === 'loading'
+  const done = status === 'done' && visibleLines >= lines.length
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F6C4C3, #FAFC97)', padding: '40px 20px 90px' }}>
@@ -62,7 +145,10 @@ export default function CookTogetherPage() {
       <p style={{ color: '#888', fontSize: '13px', margin: '0 0 24px' }}>Pick your crew and let AI find the perfect recipe for everyone</p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '32px' }}>
-        {MOCK_FRIENDS.map(f => (
+        {!friendsLoading && friends.length === 0 && (
+          <span style={{ fontSize: '13px', color: '#888' }}>You don't have any friends added yet.</span>
+        )}
+        {friends.map(f => (
           <div key={f.id} onClick={() => toggle(f.id)}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
             <div style={{
@@ -101,34 +187,82 @@ export default function CookTogetherPage() {
 
       <button
         onClick={start}
-        disabled={selected.length === 0 || !mealType || running}
+        disabled={disabled}
         style={{
           width: '100%', padding: '14px',
-          background: selected.length === 0 || !mealType || running ? '#ddd' : '#F8CE5B',
-          color: selected.length === 0 || !mealType || running ? '#aaa' : '#3D2B1F',
+          background: disabled ? '#ddd' : '#F8CE5B',
+          color: disabled ? '#aaa' : '#3D2B1F',
           border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px',
-          cursor: selected.length === 0 || !mealType || running ? 'not-allowed' : 'pointer',
+          cursor: disabled ? 'not-allowed' : 'pointer',
         }}
       >
-        Find Recipes
+        {status === 'loading' ? 'Planning…' : 'Find Recipes'}
       </button>
 
-      {running && (
+      {(status === 'done' || status === 'error' || selected.length > 0 || mealType) && status !== 'loading' && (
+        <button
+          onClick={reset}
+          style={{ width: '100%', marginTop: '10px', padding: '10px', background: 'transparent', color: '#3D2B1F', border: '1px solid #3D2B1F55', borderRadius: '12px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+        >
+          Start over
+        </button>
+      )}
+
+      {status === 'error' && (
+        <p role="alert" style={{ marginTop: '16px', color: '#b91c1c', fontSize: '14px' }}>{error}</p>
+      )}
+
+      {(status === 'loading' || status === 'done') && (
         <div style={{ marginTop: '24px', background: '#1a1a2e', borderRadius: '12px', padding: '20px', fontFamily: 'monospace', fontSize: '13px' }}>
-          {AGENT_LINES.slice(0, visibleLines).map((line, i) => (
+          {status === 'loading' && (
+            <div style={{ color: '#4ade80', lineHeight: '1.8' }}>Starting Personal Agents for each friend...</div>
+          )}
+          {lines.slice(0, visibleLines).map((line, i) => (
             <div key={i} style={{ color: '#4ade80', lineHeight: '1.8' }}>{line}</div>
           ))}
           {!done && <span style={{ color: '#4ade80' }}>▊</span>}
         </div>
       )}
 
-      {done && (
+      {done && result && (
         <div style={{ marginTop: '32px' }}>
           <p style={{ fontWeight: 700, color: '#3D2B1F', marginBottom: '12px' }}>Recipes for your group:</p>
-          {RESULT_RECIPES.map(r => (
-            <div key={r.id} onClick={() => navigate(`/recipe/${r.id}`)}
+          {result.ranking.map(r => (
+            <div key={r.recipe_id} onClick={() => navigate(`/recipe/${r.recipe_id}`)}
               style={{ background: 'white', borderRadius: '16px', padding: '20px', marginBottom: '12px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-              <p style={{ fontWeight: 700, color: '#3D2B1F', margin: 0 }}>{r.title}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                <p style={{ fontWeight: 700, color: '#3D2B1F', margin: 0 }}>
+                  {r.recipe_id === result.top_pick && '⭐ '}{r.title}
+                </p>
+                <span style={{ fontSize: '12px', color: '#888', flexShrink: 0 }}>{r.group_score}/10</span>
+              </div>
+              {r.why[0] && <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#888' }}>{r.why[0]}</p>}
+              <button
+                onClick={e => { e.stopPropagation(); setOpenWhy(openWhy === r.recipe_id ? null : r.recipe_id) }}
+                style={{ marginTop: '8px', padding: 0, background: 'none', border: 'none', color: '#d4689a', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                {openWhy === r.recipe_id ? 'Hide details' : 'Why?'}
+              </button>
+
+              {openWhy === r.recipe_id && (
+                <div onClick={e => e.stopPropagation()} style={{ marginTop: '8px', fontSize: '12px', color: '#555', lineHeight: 1.5, cursor: 'default' }}>
+                  {r.why.length > 1 && <p style={{ margin: '0 0 6px' }}>{r.why.join(' ')}</p>}
+                  {r.conflicts.length > 0 && <p style={{ margin: '0 0 6px', color: '#b45309' }}>⚠️ {r.conflicts.join(' ')}</p>}
+                  {result.agents.map(a => {
+                    const ev = a.evaluations.find(e => e.recipe_id === r.recipe_id)
+                    if (!ev) return null
+                    return (
+                      <div key={a.user_id} style={{ marginTop: '6px' }}>
+                        <strong>{cap(a.user_name)}</strong> — {ev.fit_score}/10
+                        {ev.reasons.map((reason, i) => <div key={i}>• {reason}</div>)}
+                        {ev.dealbreakers.length > 0 && <div style={{ color: '#b91c1c' }}>Dealbreaker: {ev.dealbreakers.join(', ')}</div>}
+                        {ev.can_bring.length > 0 && <div>Can bring: {ev.can_bring.join(', ')}</div>}
+                        {ev.missing.length > 0 && <div>Needs: {ev.missing.join(', ')}</div>}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ))}
         </div>
