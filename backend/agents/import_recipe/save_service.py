@@ -199,6 +199,27 @@ def delete_recipe(recipe_id: str, owner_id: str):
 
     return {"success": True}
 
+def save_recipe_to_library(recipe_id: str, user_id: str):
+    """Add a recipe to this user's saved_recipes (shows up on their home page)."""
+    conn = psycopg.connect(os.getenv("DATABASE_URL"))
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO saved_recipes (user_id, recipe_id)
+        VALUES (%s, %s)
+        ON CONFLICT (user_id, recipe_id) DO NOTHING
+        """,
+        (user_id, recipe_id)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {"success": True}
+
+
 def rate_recipe(recipe_id: str, user_id: str, rating: int):
     conn = psycopg.connect(os.getenv("DATABASE_URL"))
     cur = conn.cursor()

@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '../lib/auth'
-import { getRecipe, type RecipeDetail } from '../lib/api'
+import { api, getRecipe, type RecipeDetail } from '../lib/api'
+
+const RATING_VALUES: Record<string, 1 | 3 | 5> = {
+  'I love it': 5,
+  'Like it': 3,
+  'Hate it': 1,
+}
 
 export default function RecipeDetailPage() {
   const { id } = useParams()
@@ -13,6 +19,7 @@ export default function RecipeDetailPage() {
   const [tab, setTab] = useState<'ingredients' | 'steps'>('ingredients')
   const [rating, setRating] = useState<string | null>(null)
   const [note, setNote] = useState('')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
@@ -53,6 +60,18 @@ export default function RecipeDetailPage() {
   useEffect(() => {
     if (audio) audio.playbackRate = speed
   }, [speed, audio])
+
+  async function handleSave() {
+    if (!user || !id) return
+    setSaveState('saving')
+    try {
+      await api.saveRecipe(id, user.id)
+      if (rating) await api.rateRecipe(id, user.id, RATING_VALUES[rating])
+      setSaveState('saved')
+    } catch {
+      setSaveState('error')
+    }
+  }
 
   const tabBtn = (t: 'ingredients' | 'steps') => ({
     flex: 1, padding: '0.6rem', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
@@ -143,7 +162,7 @@ export default function RecipeDetailPage() {
             {[['😍', 'I love it'], ['👍', 'Like it'], ['👎', 'Hate it']].map(([emoji, label]) => (
               <button
                 key={label}
-                onClick={() => setRating(label)}
+                onClick={() => { setRating(label); setSaveState('idle') }}
                 style={{
                   flex: 1, padding: '0.5rem 0.25rem',
                   background: rating === label ? '#FAAED2' : '#fff',
@@ -166,10 +185,15 @@ export default function RecipeDetailPage() {
           />
 
           <button
-            style={{ width: '100%', padding: '0.7rem', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
+            onClick={handleSave}
+            disabled={saveState === 'saving'}
+            style={{ width: '100%', padding: '0.7rem', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: saveState === 'saving' ? 'default' : 'pointer', opacity: saveState === 'saving' ? 0.7 : 1 }}
           >
-            Save
+            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved ✓' : 'Save'}
           </button>
+          {saveState === 'error' && (
+            <p role="alert" style={{ margin: 0, color: '#ef4444', fontSize: '0.8rem' }}>Couldn't save. Try again.</p>
+          )}
         </section>
 
       </div>

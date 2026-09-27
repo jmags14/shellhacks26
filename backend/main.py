@@ -16,7 +16,7 @@ from agents.import_recipe.price_agent import estimate_recipe_price
 from services.recipe_service import list_recipes_for_user
 from services.friend_service import list_friends, list_friend_suggestions, add_friend
 from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
-from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe, rate_recipe
+from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe, rate_recipe, save_recipe_to_library
 
 app = FastAPI()
 
@@ -296,3 +296,11 @@ def rate_recipe_route(recipe_id: str, request: RateRequest):
     if request.rating not in (1, 3, 5):
         return {"success": False, "error": "Rating must be 1, 3, or 5"}
     return rate_recipe(recipe_id, request.user_id, request.rating)
+
+class SaveRecipeRequest(BaseModel):
+    user_id: str
+
+@app.post("/recipes/{recipe_id}/save")
+def save_recipe_route(recipe_id: str, request: SaveRecipeRequest):
+    """Add a recipe (e.g. from Recommended or Cook Together) to the user's home page."""
+    return save_recipe_to_library(recipe_id, request.user_id)

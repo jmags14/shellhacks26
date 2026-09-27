@@ -225,4 +225,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ user_ids: userIds, intent }),
     }),
+
+  // Adds a recipe to the user's home page (saved_recipes). Safe to call again.
+  saveRecipe: (recipeId: string, userId: string) =>
+    request<{ success: boolean }>(`/recipes/${recipeId}/save`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+    }),
+
+  // rating: 5 = love it, 3 = like it, 1 = hate it
+  rateRecipe: (recipeId: string, userId: string, rating: 1 | 3 | 5) =>
+    request<{ success: boolean; error?: string }>(`/recipes/${recipeId}/rate`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, rating }),
+    }),
 }
