@@ -4,6 +4,7 @@ import BottomNav from '../components/BottomNav'
 import { useUser } from '../lib/auth'
 import { api, type RecipeSummary } from '../lib/api'
 import { dismissImport, useImportJobs } from '../lib/importQueue'
+import { supabase } from '../lib/supabase'
 
 function getDifficultyDot(minutes: number) {
   if (minutes <= 20) return { color: '#86efac', label: 'Easy' }
@@ -20,6 +21,16 @@ export default function HomePage() {
   const [recipes, setRecipes] = useState<RecipeSummary[]>([])
   const [recipesLoading, setRecipesLoading] = useState(true)
   const [recipesError, setRecipesError] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  const handleDelete = async (recipeId: string) => {
+    const { data } = await supabase.auth.getUser()
+    const userId = data.user?.id
+    if (!userId) return
+    await fetch(`/api/recipes/${recipeId}?user_id=${userId}`, { method: 'DELETE' })
+    setRecipes(prev => prev.filter(r => r.id !== recipeId))
+    setConfirmDeleteId(null)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -117,6 +128,31 @@ export default function HomePage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {filtered.map(recipe => (
+              confirmDeleteId === recipe.id ? (
+                <div key={recipe.id} style={{
+                  background: '#fff',
+                  borderRadius: 16,
+                  padding: '16px 20px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: 16,
+                  minHeight: 72
+                }}>
+                  <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: 14, color: '#3d1c02', fontWeight: 600 }}>Delete this recipe?</span>
+                  <button onClick={() => handleDelete(recipe.id)} style={{
+                    background: '#dc2626', border: 'none', borderRadius: 50,
+                    padding: '6px 16px', fontSize: 13, color: '#fff',
+                    fontFamily: 'Nunito, sans-serif', fontWeight: 700, cursor: 'pointer'
+                  }}>Yes</button>
+                  <button onClick={() => setConfirmDeleteId(null)} style={{
+                    background: '#e5e7eb', border: 'none', borderRadius: 50,
+                    padding: '6px 16px', fontSize: 13, color: '#3d1c02',
+                    fontFamily: 'Nunito, sans-serif', fontWeight: 700, cursor: 'pointer'
+                  }}>No</button>
+                </div>
+              ) : (
               <Link
                 key={recipe.id}
                 to={`/recipe/${recipe.id}`}
@@ -129,8 +165,15 @@ export default function HomePage() {
                   boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  position: 'relative'
                 }}>
+                  <div style={{ position: 'absolute', top: 10, right: 12 }}>
+                    <button onClick={(e) => { e.preventDefault(); setConfirmDeleteId(recipe.id) }} style={{
+                      background: 'none', border: 'none', fontSize: 14,
+                      color: '#ccc', cursor: 'pointer', lineHeight: 1
+                    }}>✕</button>
+                  </div>
                   <div>
                     <p style={{
                       fontFamily: 'Nunito, sans-serif',
@@ -168,6 +211,7 @@ export default function HomePage() {
                   })()}
                 </div>
               </Link>
+              )
             ))}
           </div>
         )}
