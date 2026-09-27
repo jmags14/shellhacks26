@@ -13,6 +13,8 @@ export default function RecipeDetailPage() {
   const [tab, setTab] = useState<'ingredients' | 'steps'>('ingredients')
   const [rating, setRating] = useState<string | null>(null)
   const [note, setNote] = useState('')
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     if (!user || !id) return
@@ -23,6 +25,28 @@ export default function RecipeDetailPage() {
       })
       .catch(() => setLoadError('Could not load recipe.'))
   }, [user, id])
+
+  const handleNarrate = async () => {
+    if (isPlaying && audio) {
+      audio.pause()
+      setIsPlaying(false)
+      return
+    }
+    if (audio) {
+      audio.play()
+      setIsPlaying(true)
+      return
+    }
+    const userId = user?.id ?? ''
+    const response = await fetch(`/api/recipes/${id}/narrate?user_id=${userId}`)
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const newAudio = new Audio(url)
+    newAudio.onended = () => setIsPlaying(false)
+    setAudio(newAudio)
+    newAudio.play()
+    setIsPlaying(true)
+  }
 
   const tabBtn = (t: 'ingredients' | 'steps') => ({
     flex: 1, padding: '0.6rem', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
@@ -85,11 +109,17 @@ export default function RecipeDetailPage() {
             ))}
           </ul>
         ) : (
+          <>
+          <button onClick={handleNarrate}
+            style={{ width: '100%', padding: '14px', background: '#F8CE5B', color: '#3D2B1F', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            {isPlaying ? '⏸ Pause' : '▶ Play Instructions'}
+          </button>
           <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {recipe.steps?.map((step, i) => (
               <li key={i} style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.5' }}>{step}</li>
             ))}
           </ol>
+          </>
         )}
 
         {/* Rating */}
