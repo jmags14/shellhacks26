@@ -72,6 +72,12 @@ function buildLines(res: CookTogetherResult): string[] {
   return lines
 }
 
+const ANIMAL_EMOJIS = ['🐱', '🐼', '🦊', '🐨', '🐰', '🐸', '🦋', '🐯', '🦁', '🐻', '🐮', '🐷', '🐙', '🦄', '🐧']
+
+function getAnimalEmoji(index: number) {
+  return ANIMAL_EMOJIS[index % ANIMAL_EMOJIS.length]
+}
+
 // The backend answers errors as {"detail": "..."}.
 function errorMessage(err: unknown): string {
   const raw = err instanceof Error ? err.message : ''
@@ -175,7 +181,7 @@ export default function CookTogetherPage() {
         {friends.length === 0 && (
           <span style={{ fontSize: '13px', color: '#888' }}>You don't have any friends added yet.</span>
         )}
-        {friends.map(f => (
+        {friends.map((f, index) => (
           <div key={f.id} onClick={() => toggle(f.id)}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
             <div style={{
@@ -185,7 +191,7 @@ export default function CookTogetherPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '26px', transition: 'all 0.15s',
             }}>
-              {f.emoji}
+              {getAnimalEmoji(index)}
             </div>
             <span style={{ fontSize: '11px', color: '#3D2B1F', fontWeight: selected.includes(f.id) ? 700 : 400 }}>{f.name}</span>
           </div>

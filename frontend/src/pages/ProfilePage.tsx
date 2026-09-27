@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
+const ANIMAL_EMOJIS = ['🐱', '🐼', '🦊', '🐨', '🐰', '🐸', '🦋', '🐯', '🦁', '🐻', '🐮', '🐷', '🐙', '🦄', '🐧']
+
+function getAnimalEmoji(index: number) {
+  return ANIMAL_EMOJIS[index % ANIMAL_EMOJIS.length]
+}
+
 export default function ProfilePage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -136,12 +142,12 @@ export default function ProfilePage() {
               My Friends
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {myFriends.map(f => (
+              {myFriends.map((f, index) => (
                 <div key={f.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   background: '#FFFFE0', borderRadius: 16, padding: '12px 18px'
                 }}>
-                  <span style={{ fontSize: 26 }}>{f.emoji}</span>
+                  <span style={{ fontSize: 26 }}>{getAnimalEmoji(index)}</span>
                   <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 600, color: '#3d1c02', fontSize: 16 }}>{f.name}</span>
                 </div>
               ))}
