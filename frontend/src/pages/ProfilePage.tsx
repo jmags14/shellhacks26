@@ -32,11 +32,60 @@ export default function ProfilePage() {
     })
   }, [])
 
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
   const displayName = email.split('@')[0] || 'You'
   const initial = displayName[0]?.toUpperCase() || '?'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100vh', background: '#fff', paddingBottom: '80px', position: 'relative' }}>
+      {/* Sign out button */}
+      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+        {!showConfirm ? (
+          <button
+            onClick={() => setShowConfirm(true)}
+            style={{
+              background: '#fee2e2', border: 'none', borderRadius: 50,
+              padding: '8px 18px', fontSize: 13,
+              fontFamily: 'Nunito, sans-serif', fontWeight: 700,
+              color: '#dc2626', cursor: 'pointer'
+            }}
+          >
+            Sign Out
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: '#888', fontFamily: 'Nunito, sans-serif' }}>Sure?</span>
+            <button
+              onClick={handleSignOut}
+              style={{
+                background: '#dc2626', border: 'none', borderRadius: 50,
+                padding: '8px 16px', fontSize: 13,
+                fontFamily: 'Nunito, sans-serif', fontWeight: 700,
+                color: '#fff', cursor: 'pointer'
+              }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setShowConfirm(false)}
+              style={{
+                background: '#e5e7eb', border: 'none', borderRadius: 50,
+                padding: '8px 16px', fontSize: 13,
+                fontFamily: 'Nunito, sans-serif', fontWeight: 700,
+                color: '#3d1c02', cursor: 'pointer'
+              }}
+            >
+              No
+            </button>
+          </div>
+        )}
+      </div>
       <div style={{ maxWidth: 420, margin: '0 auto', padding: '60px 24px 24px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 48 }}>
           <div style={{

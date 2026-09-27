@@ -7,20 +7,13 @@ import { dismissImport, useImportJobs } from '../lib/importQueue'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { user, signOut } = useUser()
+  const { user } = useUser()
   const [query, setQuery] = useState('')
-  const [backendUp, setBackendUp] = useState<boolean | null>(null)
-
   const importJobs = useImportJobs()
   const doneImports = importJobs.filter(j => j.status === 'done').length
   const [recipes, setRecipes] = useState<RecipeSummary[]>([])
   const [recipesLoading, setRecipesLoading] = useState(true)
   const [recipesError, setRecipesError] = useState('')
-
-  // Temporary connectivity check against the FastAPI backend.
-  useEffect(() => {
-    api.health().then(() => setBackendUp(true)).catch(() => setBackendUp(false))
-  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -44,14 +37,6 @@ export default function HomePage() {
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: '400', fontFamily: 'Bebas Neue, sans-serif', color: '#1a1a1a' }}>Doomscroll &amp; Dine</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span
-            title={backendUp === null ? 'Checking backend…' : backendUp ? 'Backend connected' : 'Backend unreachable'}
-            style={{ width: '8px', height: '8px', borderRadius: '50%', background: backendUp === null ? '#9ca3af' : backendUp ? '#22c55e' : '#ef4444' }}
-          />
-          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{user?.user_metadata?.full_name?.split(' ')[0] ?? user?.email}</span>
-          <button onClick={signOut} style={{ fontSize: '0.8rem', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            Sign out
-          </button>
         </div>
       </header>
 
