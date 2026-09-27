@@ -9,6 +9,32 @@ const RATING_VALUES: Record<string, 1 | 3 | 5> = {
   'Hate it': 1,
 }
 
+// Your rating pill + note aren't stored on the server (there's no notes column,
+// and no endpoint to read back "your" rating), so they're kept in this browser
+// instead. They survive reloads and backend restarts; clearing site data loses them.
+interface Draft {
+  rating: string | null
+  note: string
+}
+
+const draftKey = (userId: string, recipeId: string) => `recipe-draft:${userId}:${recipeId}`
+
+function loadDraft(userId: string, recipeId: string): Draft | null {
+  try {
+    return JSON.parse(localStorage.getItem(draftKey(userId, recipeId)) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+function saveDraft(userId: string, recipeId: string, draft: Draft) {
+  try {
+    localStorage.setItem(draftKey(userId, recipeId), JSON.stringify(draft))
+  } catch {
+    // storage unavailable (e.g. private browsing): the page still works, it just won't remember
+  }
+}
+
 export default function RecipeDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -32,6 +58,16 @@ export default function RecipeDetailPage() {
         else setLoadError('Recipe not found.')
       })
       .catch(() => setLoadError('Could not load recipe.'))
+  }, [user, id])
+
+  // Restore your rating/note for this recipe, if you've left any before.
+  useEffect(() => {
+    if (!user || !id) return
+    const draft = loadDraft(user.id, id)
+    if (draft) {
+      setRating(draft.rating)
+      setNote(draft.note)
+    }
   }, [user, id])
 
   const handleNarrate = async () => {
@@ -162,7 +198,11 @@ export default function RecipeDetailPage() {
             {[['😍', 'I love it'], ['👍', 'Like it'], ['👎', 'Hate it']].map(([emoji, label]) => (
               <button
                 key={label}
-                onClick={() => { setRating(label); setSaveState('idle') }}
+                onClick={() => {
+                  setRating(label)
+                  setSaveState('idle')
+                  if (user && id) saveDraft(user.id, id, { rating: label, note })
+                }}
                 style={{
                   flex: 1, padding: '0.5rem 0.25rem',
                   background: rating === label ? '#FAAED2' : '#fff',
@@ -179,7 +219,10 @@ export default function RecipeDetailPage() {
           <textarea
             placeholder="Add a note..."
             value={note}
-            onChange={e => setNote(e.target.value)}
+            onChange={e => {
+              setNote(e.target.value)
+              if (user && id) saveDraft(user.id, id, { rating, note: e.target.value })
+            }}
             rows={3}
             style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.85rem', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
           />
