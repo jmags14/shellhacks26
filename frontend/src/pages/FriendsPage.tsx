@@ -36,7 +36,23 @@ export default function FriendsPage() {
         <p style={{ color: '#aaa', fontSize: 14, marginBottom: 32 }}>People you might know</p>
 
         {suggestions.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#aaa', marginTop: 60, fontSize: 15 }}>You've added everyone! 🎉</p>
+          <div style={{ textAlign: 'center', marginTop: 60 }}>
+            <p style={{ color: '#aaa', fontSize: 15, marginBottom: 24 }}>You've added everyone! 🎉</p>
+            <button
+              onClick={() => {
+                try { localStorage.removeItem('friends') } catch {}
+                setAdded([])
+              }}
+              style={{
+                background: '#FAFC97', border: 'none', borderRadius: 50,
+                padding: '14px 32px', fontSize: 16,
+                fontFamily: 'Nunito, sans-serif', fontWeight: 700,
+                color: '#3d1c02', cursor: 'pointer'
+              }}
+            >
+              Reset Friends List
+            </button>
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {suggestions.map(friend => (

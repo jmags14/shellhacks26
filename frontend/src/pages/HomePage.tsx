@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import { useUser } from '../lib/auth'
-import { api, type Friend, type RecipeSummary } from '../lib/api'
+import { api, type RecipeSummary } from '../lib/api'
 import { dismissImport, useImportJobs } from '../lib/importQueue'
 
 export default function HomePage() {
@@ -13,7 +13,6 @@ export default function HomePage() {
 
   const importJobs = useImportJobs()
   const doneImports = importJobs.filter(j => j.status === 'done').length
-  const [friends, setFriends] = useState<Friend[]>([])
   const [recipes, setRecipes] = useState<RecipeSummary[]>([])
   const [recipesLoading, setRecipesLoading] = useState(true)
   const [recipesError, setRecipesError] = useState('')
@@ -25,7 +24,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) return
-    api.listFriends(user.id).then(res => setFriends(res.friends)).catch(() => {})
     api.listRecipes(user.id)
       .then(res => { console.log('recipes result:', res); setRecipes(res.recipes) })
       .catch(err => { console.error('recipes error:', err); setRecipesError('Could not load recipes.') })
@@ -67,22 +65,6 @@ export default function HomePage() {
           onChange={e => setQuery(e.target.value)}
           style={{ width: '100%', padding: '0.75rem 1rem', boxSizing: 'border-box', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', background: '#fff' }}
         />
-
-        {/* Friends */}
-        <section>
-          <h2 style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Friends</h2>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            {friends.length === 0 && <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No friends yet.</span>}
-            {friends.map(f => (
-              <div key={f.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
-                  {f.name.charAt(0).toUpperCase()}
-                </div>
-                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{f.name}</span>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* Recipes */}
         <section>
