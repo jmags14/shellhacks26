@@ -49,6 +49,8 @@ export default function RecipeDetailPage() {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
+  const [priceResult, setPriceResult] = useState<{ estimated_total: number } | null>(null)
+  const [priceLoading, setPriceLoading] = useState(false)
 
   useEffect(() => {
     if (!user || !id) return
@@ -96,6 +98,20 @@ export default function RecipeDetailPage() {
   useEffect(() => {
     if (audio) audio.playbackRate = speed
   }, [speed, audio])
+
+  async function handleEstimatePrice() {
+    if (priceResult || priceLoading || !id) return
+    setPriceLoading(true)
+    try {
+      const res = await fetch(`/api/recipes/${id}/price?user_id=${user?.id ?? ''}`)
+      const data = await res.json()
+      if (data.success) setPriceResult(data.price_estimate)
+    } catch {
+      // silently fail — button remains
+    } finally {
+      setPriceLoading(false)
+    }
+  }
 
   async function handleSave() {
     if (!user || !id) return
@@ -188,6 +204,34 @@ export default function RecipeDetailPage() {
             ))}
           </ol>
           </>
+        )}
+
+        {/* Price Estimate */}
+        <style>{`@keyframes fillBar { from { width: 0% } to { width: 100% } }`}</style>
+        {priceResult ? (
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem 1.25rem' }}>
+            <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: '700', color: '#111827' }}>
+              🛒 Estimated grocery cost: ${priceResult.estimated_total.toFixed(2)}
+            </p>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>Based on buying full grocery units</p>
+          </div>
+        ) : priceLoading ? (
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1rem 1.25rem' }}>
+            <p style={{ margin: '0 0 10px', fontSize: '0.85rem', color: '#6b7280' }}>Estimating cost…</p>
+            <div style={{ background: '#f3f4f6', borderRadius: '999px', height: '10px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', background: '#F8CE5B', borderRadius: '999px',
+                animation: 'fillBar 1.5s ease-in-out forwards'
+              }} />
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleEstimatePrice}
+            style={{ width: '100%', padding: '0.75rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '600', color: '#374151', cursor: 'pointer' }}
+          >
+            🛒 Estimate grocery cost
+          </button>
         )}
 
         {/* Rating */}
