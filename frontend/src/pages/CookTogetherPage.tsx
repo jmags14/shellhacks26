@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import { useUser } from '../lib/auth'
 import { api, listFriends, type CookTogetherResult, type Friend, type TasteEvidence } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 const cap = (name: string) => name.charAt(0).toUpperCase() + name.slice(1)
 
@@ -105,21 +106,21 @@ export default function CookTogetherPage() {
   }, [user, selected, mealType, result])
 
   useEffect(() => {
-    const ALL_FRIENDS = [
-      { id: '1', name: 'Maya', emoji: '🐱' },
-      { id: '2', name: 'Jordan', emoji: '🐼' },
-      { id: '3', name: 'Priya', emoji: '🦊' },
-      { id: '4', name: 'Carlos', emoji: '🐨' },
-      { id: '5', name: 'Lily', emoji: '🐰' },
-      { id: '6', name: 'Sam', emoji: '🐸' },
-      { id: '7', name: 'Ava', emoji: '🦋' },
-    ]
-    try {
-      const addedIds: string[] = JSON.parse(localStorage.getItem('friends') || '[]')
-      setFriends(ALL_FRIENDS.filter(f => addedIds.includes(f.id)))
-    } catch {
-      setFriends([])
-    }
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id
+      if (!userId) return
+      fetch(`/api/friends?user_id=${userId}`)
+        .then(r => r.json())
+        .then(data => {
+          const friendList = (data.friends || []).map((f: any) => ({
+            id: f.id,
+            name: f.username || f.display_name || f.email?.split('@')[0] || 'Friend',
+            emoji: '🐾'
+          }))
+          setFriends(friendList)
+        })
+        .catch(() => setFriends([]))
+    })
   }, [])
 
   // Reveal the agent log one line at a time.
