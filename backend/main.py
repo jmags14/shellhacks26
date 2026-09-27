@@ -55,7 +55,7 @@ async def create_cook_together(
     request: CookTogetherRequest,
 ):
     try:
-        planner, personal_outputs, candidates = await run_cook_together(
+        run = await run_cook_together(
             user_ids=request.user_ids,
             intent=request.intent,
             use_mock_agents=USE_MOCK_AGENTS,
@@ -64,17 +64,25 @@ async def create_cook_together(
         # e.g. a user that isn't in the users table, or no candidate recipes
         raise HTTPException(status_code=400, detail=str(e))
 
-    titles = {c.recipe_id: c.title for c in candidates}
+    planner = run.planner
+    titles = {c.recipe_id: c.title for c in run.candidates}
 
     return {
         "mock": USE_MOCK_AGENTS,
+        # "mock" | "ok" | "planner_fallback" | "unavailable" (see workflow.py)
+        "agent_status": run.agent_status,
         "top_pick": planner.top_pick,
         "conflicts_resolved": planner.conflicts_resolved,
         "ranking": [
             {**r.model_dump(), "title": titles.get(r.recipe_id, "Unknown recipe")}
             for r in planner.ranking
         ],
-        "agents": [p.model_dump() for p in personal_outputs],
+        "agents": [
+            # evidence: why each recipe might suit this person (similar saved
+            # recipes, cuisines they keep saving), shown in the app's "Why?" panel
+            {**p.model_dump(), "evidence": run.evidence.get(p.user_id, {})}
+            for p in run.personal_outputs
+        ],
     }
 
 def run_import(url: str, user_id: str) -> dict:

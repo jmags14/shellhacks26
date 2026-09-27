@@ -51,12 +51,13 @@ class FilterScoreTests(unittest.TestCase):
         self.assertEqual(restriction_reasons(recipe("salmon"), [], "pescatarian"), [])
 
     def test_score_components_and_recency(self):
-        context = UserContext(user_id="u", name="U", pantry=[PantryItem(name="Rice", quantity=1),
-            PantryItem(name="tofu", quantity=0)], recipe_history=[RecipeHistoryItem(recipe_id="r", title="R", rating=5)])
+        context = UserContext(user_id="u", name="U",
+            recipe_history=[RecipeHistoryItem(recipe_id="r", title="R", rating=5)])
         scored = score_candidate(recipe("rice", "tofu"), .9, context, set())
-        self.assertEqual(scored["pantry_coverage"], .5)
-        self.assertEqual(scored["match_score"], 83)
-        self.assertEqual(score_candidate(recipe("rice", "tofu"), .9, context, {"r"})["match_score"], 78)
+        # 100 * (0.85 * taste .9 + 0.15 * history 1.0); the pantry no longer counts.
+        self.assertEqual(scored["match_score"], 92)
+        self.assertNotIn("pantry", scored["components"])
+        self.assertEqual(score_candidate(recipe("rice", "tofu"), .9, context, {"r"})["match_score"], 84)
 
     def test_shortlist_filters_recent_and_unsafe_before_scoring(self):
         user_id = UUID(int=1)

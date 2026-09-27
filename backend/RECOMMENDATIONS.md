@@ -54,12 +54,12 @@ Supabase identity before exposing user-specific recommendations publicly.
    in the existing recommendation tables within the last 24 hours.
 5. Score and shortlist at most five. Percentages use:
 
-   `round(100 * (0.70 * taste + 0.20 * pantry + 0.10 * history))`
+   `round(100 * (0.85 * taste + 0.15 * history))`
 
-   Taste is cosine similarity clamped to [0, 1]. Pantry is the fraction of
-   distinct ingredient names present with positive or unknown quantity; it
-   does not guarantee enough quantity to cook. History is latest rating / 5,
+   Taste is cosine similarity clamped to [0, 1]. History is latest rating / 5,
    or 0.5 when unrated/unseen; it is halved if cooked in the last seven days.
+   The pantry no longer counts (the app has no pantry feature); it used to be
+   20% of the score, which capped users without a pantry at about 80%.
    Scores are Match Scores, not calibrated probabilities.
 6. Optional Personal Agent evaluates just this shortlist once. Its existing
    fit scores rerank eligible candidates; ties use deterministic match then ID.
@@ -92,6 +92,33 @@ implemented. Time/budget scoring, persistent explanation caching, cold-start
 fallbacks, and frontend integration are intentionally deferred.
 
 ## Incremental checks
+
+### Expand the shared catalog
+
+`database/seed_recipe_catalog.py` adds 12 shared recipes (six savory and six
+sweet), their ingredients/instructions, and 768-dimensional embeddings using
+the existing embedding service. It does not modify users, preferences, pantry,
+saved recipes, or cooking history. Recipes have no owner and are eligible for
+catalog discovery. Existing recommendation/display limits are unchanged.
+
+From the repository root:
+
+```powershell
+.\venv\Scripts\python.exe backend/database/seed_recipe_catalog.py --preview
+.\venv\Scripts\python.exe backend/database/seed_recipe_catalog.py
+```
+
+The second command writes to the configured database and makes up to 12 Gemini
+embedding requests on the first run, even when `USE_MOCK_AGENTS=true`. It requires
+the existing `recipe_embeddings` table and root `.env` credentials. Each recipe
+and vector commit together; failures roll back that recipe and produce a nonzero
+exit code. Reruns skip current embeddings and retry failed recipes. A title
+collision with another recipe source is skipped without changes. Recipe content
+already inserted by this script is preserved on reruns.
+
+More catalog entries provide more retrieval options, not more result cards.
+Cook Together currently does not apply its sweet/savory `intent` argument, so
+adding sweets alone does not make that toggle filter the results.
 
 From the repository root, using PowerShell:
 

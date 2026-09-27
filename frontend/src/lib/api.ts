@@ -81,14 +81,29 @@ function emojiFor(id: string): string {
   return FRIEND_EMOJIS[sum % FRIEND_EMOJIS.length]
 }
 
+// Why a recipe might suit one person, computed from their saved/cooked recipes.
+export interface TasteEvidence {
+  cuisine: string | null
+  cuisine_matches: number // how many of their saved/cooked recipes share this cuisine
+  saved_or_cooked_total: number
+  most_similar_recipe: { title: string; similarity_pct: number } | null
+  taste_match_pct: number | null
+  already_saved_or_cooked: boolean
+  your_rating: number | null
+}
+
 export interface CookTogetherResult {
   mock: boolean // true while the backend runs with Gemini disabled
+  // mock: Gemini off | ok: real agents | planner_fallback: planner was busy, ranked by
+  // the real Personal Agent scores | unavailable: Gemini unreachable, placeholder scores
+  agent_status: 'mock' | 'ok' | 'planner_fallback' | 'unavailable'
   top_pick: string
   conflicts_resolved: string[]
   ranking: { recipe_id: string; title: string; group_score: number; why: string[]; conflicts: string[] }[]
   agents: {
     user_id: string
     user_name: string
+    evidence: Record<string, TasteEvidence> // by recipe_id
     evaluations: {
       recipe_id: string
       fit_score: number

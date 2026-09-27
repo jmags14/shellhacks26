@@ -20,12 +20,19 @@ INGREDIENTS = {
         "rice", "black beans", "tomato", "onion", "garlic", "bell pepper",
         "broccoli", "spinach", "avocado", "lime", "olive oil", "salt",
         "black pepper", "garam masala", "curry powder", "taco seasoning",
+        "chickpeas", "apple", "banana", "strawberry", "cinnamon", "sugar",
+        "chia seeds", "unsweetened cocoa powder", "vanilla extract",
     )
 }
 INGREDIENTS.update({
     "chicken breast": ("meat", set()), "ground beef": ("meat", set()),
     "salmon": ("fish", {"fish"}), "tofu": ("plant", {"soy"}),
     "egg": ("egg", {"egg"}),
+    "plain yogurt": ("dairy", {"milk"}),
+    # Generic oats are not certified gluten-free. Conservatively screen coconut
+    # for tree-nut restrictions until more specific allergy metadata is available.
+    "rolled oats": ("plant", {"gluten"}),
+    "plain coconut milk": ("plant", {"tree nuts"}),
     "heavy cream": ("dairy", {"milk"}), "parmesan cheese": ("dairy", {"milk"}),
     "cheddar cheese": ("dairy", {"milk"}), "butter": ("dairy", {"milk"}),
     "soy sauce": ("plant", {"soy", "wheat", "gluten"}),

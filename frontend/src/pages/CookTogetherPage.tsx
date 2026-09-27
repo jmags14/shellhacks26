@@ -2,9 +2,25 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import { useUser } from '../lib/auth'
-import { api, listFriends, type CookTogetherResult, type Friend } from '../lib/api'
+import { api, listFriends, type CookTogetherResult, type Friend, type TasteEvidence } from '../lib/api'
 
 const cap = (name: string) => name.charAt(0).toUpperCase() + name.slice(1)
+
+// Plain-language reasons a recipe might suit someone, from their saved/cooked recipes.
+function evidenceLines(ev: TasteEvidence | undefined): string[] {
+  if (!ev) return []
+  const lines: string[] = []
+  if (ev.your_rating != null) lines.push(`Rated it ${ev.your_rating}/5 when they cooked it`)
+  else if (ev.already_saved_or_cooked) lines.push('Already one of their saved recipes')
+  if (ev.most_similar_recipe) {
+    lines.push(`Similar to ${ev.most_similar_recipe.title} they saved (${ev.most_similar_recipe.similarity_pct}% similar), so they might like it`)
+  }
+  if (ev.cuisine && ev.cuisine_matches > 0) {
+    lines.push(`${ev.cuisine}: same cuisine as ${ev.cuisine_matches} of the ${ev.saved_or_cooked_total} recipes they saved or cooked`)
+  }
+  if (ev.taste_match_pct != null) lines.push(`${ev.taste_match_pct}% match with their overall taste`)
+  return lines
+}
 
 // Remember the last search so leaving the page (e.g. to open a recipe) doesn't lose it.
 interface SavedSearch {
@@ -49,7 +65,9 @@ function buildLines(res: CookTogetherResult): string[] {
   lines.push(`Planner: ranked ${res.ranking.length} recipes for the group...`)
   const top = res.ranking.find(r => r.recipe_id === res.top_pick)
   if (top) lines.push(`Top pick: ${top.title} — group score ${top.group_score}/10 🎉`)
-  if (res.mock) lines.push('(Mock mode: Gemini is off, scores are placeholders)')
+  if (res.agent_status === 'mock') lines.push('(Mock mode: Gemini is off, scores are placeholders)')
+  if (res.agent_status === 'planner_fallback') lines.push('⚠️ The group planner was busy, so recipes are ranked by average score instead.')
+  if (res.agent_status === 'unavailable') lines.push('⚠️ The AI is busy right now, so these are placeholder scores. Try again in a moment.')
   return lines
 }
 
@@ -254,10 +272,9 @@ export default function CookTogetherPage() {
                     return (
                       <div key={a.user_id} style={{ marginTop: '6px' }}>
                         <strong>{cap(a.user_name)}</strong> — {ev.fit_score}/10
-                        {ev.reasons.map((reason, i) => <div key={i}>• {reason}</div>)}
-                        {ev.dealbreakers.length > 0 && <div style={{ color: '#b91c1c' }}>Dealbreaker: {ev.dealbreakers.join(', ')}</div>}
-                        {ev.can_bring.length > 0 && <div>Can bring: {ev.can_bring.join(', ')}</div>}
-                        {ev.missing.length > 0 && <div>Needs: {ev.missing.join(', ')}</div>}
+                        {ev.dealbreakers.length > 0 && <div style={{ color: '#b91c1c' }}>⚠️ Dealbreaker: {ev.dealbreakers.join(', ')}</div>}
+                        {evidenceLines(a.evidence[r.recipe_id]).map((line, i) => <div key={'e' + i}>• {line}</div>)}
+                        {ev.reasons.map((reason, i) => <div key={i} style={{ color: '#888' }}>“{reason}”</div>)}
                       </div>
                     )
                   })}

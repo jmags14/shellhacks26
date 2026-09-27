@@ -10,7 +10,7 @@ from agents.cook_together.schemas import UserContext
 from database.db import get_db_connection
 from services.user_context_service import get_user_context
 from services.recipe_service import get_recipes_by_ids
-from services.recommendation_filters import normalize, restriction_reasons
+from services.recommendation_filters import restriction_reasons
 
 
 class RecommendationDataError(Exception):
@@ -166,18 +166,16 @@ def score_candidate(recipe, similarity: float, context: UserContext, recent_cook
     if not math.isfinite(similarity):
         raise RecommendationDataError("Non-finite cosine similarity.")
     taste = min(1.0, max(0.0, similarity))
-    pantry = {normalize(p.name) for p in context.pantry if p.quantity is None or p.quantity > 0}
-    ingredients = {normalize(i.name) for i in recipe.ingredients}
-    coverage = len(ingredients & pantry) / len(ingredients) if ingredients else 0.0
     latest = next((h for h in context.recipe_history if h.recipe_id == recipe.recipe_id), None)
     history = latest.rating / 5 if latest and latest.rating is not None else 0.5
     if recipe.recipe_id in recent_cooked:
         history *= 0.5
-    score = round(100 * (0.7 * taste + 0.2 * coverage + 0.1 * history))
+    # Pantry was removed from the app, so it no longer counts toward the score.
+    score = round(100 * (0.85 * taste + 0.15 * history))
     return {
         "recipe_id": recipe.recipe_id, "title": recipe.title,
-        "match_score": score, "pantry_coverage": coverage,
-        "components": {"taste": taste, "pantry": coverage, "history": history},
+        "match_score": score,
+        "components": {"taste": taste, "history": history},
         "discovery": not any(r.recipe_id == recipe.recipe_id for r in context.saved_recipes)
                      and latest is None,
         "cuisine": recipe.tags[0] if recipe.tags else None,
