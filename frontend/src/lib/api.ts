@@ -143,6 +143,24 @@ export async function listFriends(userId: string): Promise<{ friends: Friend[] }
   return { friends: res.friends.map(f => ({ id: f.id, name: f.username, emoji: emojiFor(f.id), taste: f.taste })) }
 }
 
+export async function listFriendSuggestions(userId: string): Promise<{ users: Friend[] }> {
+  if (USE_SEEDED_DATA) return { users: [] }
+
+  const res = await request<{ users: { id: string; username: string }[] }>(
+    `/friends/suggestions?user_id=${encodeURIComponent(userId)}`,
+  )
+  return { users: res.users.map(u => ({ id: u.id, name: u.username, emoji: emojiFor(u.id) })) }
+}
+
+export async function addFriend(userId: string, friendId: string): Promise<{ success: boolean; error?: string }> {
+  if (USE_SEEDED_DATA) return { success: true }
+
+  return request<{ success: boolean; error?: string }>('/friends', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, friend_id: friendId }),
+  })
+}
+
 export async function listRecipes(userId: string): Promise<{ recipes: RecipeSummary[] }> {
   if (USE_SEEDED_DATA) {
     return {
@@ -169,6 +187,8 @@ export const api = {
   health: () => request<{ status: string }>('/'),
 
   listFriends,
+  listFriendSuggestions,
+  addFriend,
   listRecipes,
   getRecipe,
 

@@ -14,7 +14,7 @@ from agents.import_recipe.save_service import save_recipe, get_recipe, delete_re
 from services.embedding_service import embed_recipe
 from agents.import_recipe.price_agent import estimate_recipe_price
 from services.recipe_service import list_recipes_for_user
-from services.friend_service import list_friends
+from services.friend_service import list_friends, list_friend_suggestions, add_friend
 from agents.import_recipe.narration_agent import narrate_recipe, narrate_step
 from agents.import_recipe.save_service import save_recipe, get_recipe, delete_recipe, rate_recipe
 
@@ -207,6 +207,24 @@ def list_friends_route(user_id: str):
         "success": True,
         "friends": list_friends(user_id)
     }
+
+
+@app.get("/friends/suggestions")
+def friend_suggestions_route(user_id: str):
+    return {
+        "success": True,
+        "users": list_friend_suggestions(user_id)
+    }
+
+
+class AddFriendRequest(BaseModel):
+    user_id: str
+    friend_id: str
+
+
+@app.post("/friends")
+def add_friend_route(request: AddFriendRequest):
+    return add_friend(request.user_id, request.friend_id)
 
 
 @app.get("/recipes")

@@ -60,3 +60,84 @@ def list_friends(user_id: str) -> list[dict]:
 
     finally:
         conn.close()
+
+
+def list_friend_suggestions(user_id: str) -> list[dict]:
+    """
+    Users the given user has no friendship row with (in either direction).
+    """
+
+    conn = get_db_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT u.id, u.username
+                FROM users u
+                WHERE u.id <> %s
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM friendships f
+                      WHERE (f.user_id = %s AND f.friend_id = u.id)
+                         OR (f.user_id = u.id AND f.friend_id = %s)
+                  )
+                ORDER BY u.username;
+                """,
+                (user_id, user_id, user_id),
+            )
+
+            return [
+                {"id": str(uid), "username": username}
+                for uid, username in cursor.fetchall()
+            ]
+
+    finally:
+        conn.close()
+
+
+def add_friend(user_id: str, friend_id: str) -> dict:
+    """
+    Create an accepted friendship. No-op if one already exists in either direction.
+    """
+
+    if user_id == friend_id:
+        return {"success": False, "error": "You can't add yourself"}
+
+    conn = get_db_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM users WHERE id = %s;", (friend_id,))
+
+            if cursor.fetchone() is None:
+                return {"success": False, "error": "User not found"}
+
+            cursor.execute(
+                """
+                SELECT 1
+                FROM friendships
+                WHERE (user_id = %s AND friend_id = %s)
+                   OR (user_id = %s AND friend_id = %s);
+                """,
+                (user_id, friend_id, friend_id, user_id),
+            )
+
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    INSERT INTO friendships (user_id, friend_id, status)
+                    VALUES (%s, %s, 'accepted');
+                    """,
+                    (user_id, friend_id),
+                )
+
+        conn.commit()
+        return {"success": True}
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
