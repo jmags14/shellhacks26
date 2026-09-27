@@ -95,7 +95,9 @@ def get_recipes_by_ids(recipe_ids: list[UUID]) -> list[CandidateRecipe]:
 
 def list_recipes_for_user(user_id: str) -> list[dict]:
     """
-    Recipes a user can see: their own, plus unowned (seeded) ones.
+    Recipes in a user's own library: ones they imported/own, plus ones they saved.
+    Unowned (seeded catalog) recipes are not listed here; they only feed
+    recommendations and can still be opened by id.
     """
 
     conn = get_db_connection()
@@ -119,10 +121,15 @@ def list_recipes_for_user(user_id: str) -> list[dict]:
                         WHERE ri.recipe_id = r.id
                     ) AS ingredient_count
                 FROM recipes r
-                WHERE r.owner_id = %s OR r.owner_id IS NULL
+                WHERE r.owner_id = %s
+                   OR EXISTS (
+                       SELECT 1
+                       FROM saved_recipes sr
+                       WHERE sr.recipe_id = r.id AND sr.user_id = %s
+                   )
                 ORDER BY r.created_at DESC;
                 """,
-                (user_id,),
+                (user_id, user_id),
             )
 
             return [
